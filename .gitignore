@@ -21,4 +21,4 @@ Thumbs.db
 
 # Env files
 .env
-application-local.yml
+**/application-local.yml
