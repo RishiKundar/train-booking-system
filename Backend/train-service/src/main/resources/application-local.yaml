@@ -1,0 +1,3 @@
+spring:
+  datasource:
+    password: rishi12345

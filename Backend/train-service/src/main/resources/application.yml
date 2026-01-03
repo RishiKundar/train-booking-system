@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/mydb?currentSchema=train_service
     username: app_project
-    password: rishi12345
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
