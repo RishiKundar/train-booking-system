@@ -1,0 +1,24 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: user-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mydb?currentSchema=user_service
+    username: app_project
+    password: rishi12345
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+
+  flyway:
+    enabled: true
+
+jwt:
+  secret: 58cdcad7890020f0b9bb4f9e8189048f2897ac726df018d4f2b83677b1b8601c
+  access-token-expiry: 15m
+  refresh-token-expiry: 30d
