@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-@Table(name = "stations")
+@Table(name = "stations", schema = "train_service")
 @Getter
 @Setter
 @Entity

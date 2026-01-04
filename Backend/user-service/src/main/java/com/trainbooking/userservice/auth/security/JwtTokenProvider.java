@@ -24,6 +24,8 @@ public class JwtTokenProvider {
 
     public JwtTokenProvider(JwtProperties jwtProperties){
         this.jwtProperties = jwtProperties;
+        String secret = jwtProperties.getSecret();
+        System.out.println("JWT SECRET LENGTH = " + (secret != null ? secret.length() : "null"));
         this.key = Keys.
                 hmacShaKeyFor(jwtProperties.
                         getSecret()

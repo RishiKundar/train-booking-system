@@ -10,7 +10,6 @@ import java.time.Duration;
 
 @Getter
 @Setter
-@Configuration
 @ConfigurationProperties(prefix = "jwt")
 public class JwtProperties {
 

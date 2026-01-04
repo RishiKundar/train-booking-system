@@ -12,7 +12,7 @@ import java.time.LocalTime;
 @Entity
 @Getter
 @Setter
-@Table(name = "train_routes")
+@Table(name = "train_routes", schema = "train_service")
 public class TrainRoute {
 
     @Id

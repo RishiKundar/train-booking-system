@@ -3,9 +3,8 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/mydb?currentSchema=train_service
-    username: app_project
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://ep-frosty-bird-a1i1lnsi-pooler.ap-southeast-1.aws.neon.tech:5432/neondb?currentSchema=train_service&sslmode=require&channelBinding=require
+
 
   jpa:
     hibernate:

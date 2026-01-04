@@ -15,7 +15,8 @@ import java.util.UUID;
         indexes = {
             @Index(name = "idx_users_email", columnList = "email_id"),
             @Index(name = "idx_users_mobile", columnList = "mobile_no")
-        }
+        },
+        schema = "user_service"
 )
 @Getter
 @Setter
@@ -81,7 +82,8 @@ public class User {
     @JoinTable(
             name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
+            inverseJoinColumns = @JoinColumn(name = "role_id"),
+            schema = "user_service"
     )
     private Set<Role> roles;
 

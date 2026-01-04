@@ -14,7 +14,8 @@ import java.util.UUID;
         indexes = {
                 @Index(name = "idx_refresh_token_token",columnList = "token"),
                 @Index(name = "idx_refresh_token_user", columnList = "user_id")
-        }
+        },
+        schema = "user_service"
 )
 @Getter
 @Setter
