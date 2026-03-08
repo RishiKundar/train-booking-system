@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/routes")
+@RequestMapping("/train/routes")
 @RequiredArgsConstructor
 public class TrainRouteController {
 
