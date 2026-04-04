@@ -28,4 +28,7 @@ public class SeatInventory {
 
     @Column(name = "available_seats", nullable = false)
     private Integer availableSeats;
+
+    @Version
+    private Long version;
 }

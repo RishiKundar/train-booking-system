@@ -5,8 +5,8 @@
 -- =========================================================
 
 
-INSERT INTO user_service.roles (id,"role")
+INSERT INTO roles (id,"role")
 	VALUES (1,'USER');
 
-INSERT INTO user_service.roles (id,"role")
+INSERT INTO roles (id,"role")
 	VALUES (2,'ADMIN');

@@ -24,7 +24,7 @@ public class TrainRouteController {
         return ResponseEntity.ok(trainRouteService.addRoute(trainRouteRequest));
     }
 
-    @GetMapping("/train/{trainId}")
+    @GetMapping("/train-route/{trainId}")
     public ResponseEntity<List<TrainRouteResponse>> getRoutes(@PathVariable Long trainId){
         return ResponseEntity.ok(trainRouteService.getRoutesByTrain(trainId));
     }

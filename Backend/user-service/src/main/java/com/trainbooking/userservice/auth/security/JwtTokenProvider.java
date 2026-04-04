@@ -26,6 +26,7 @@ public class JwtTokenProvider {
         this.jwtProperties = jwtProperties;
         String secret = jwtProperties.getSecret();
         System.out.println("JWT SECRET LENGTH = " + (secret != null ? secret.length() : "null"));
+        System.out.println("JWT SECRET KEY = " + (secret != null ? secret : "null"));
         this.key = Keys.
                 hmacShaKeyFor(jwtProperties.
                         getSecret()
@@ -38,7 +39,6 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .setSubject(user.getId().toString())
-                .claim("email", user.getEmailId())
                 .claim("roles", user.getRoles().stream().map(role -> role.getRole()).collect(Collectors.toList()))
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(expiry))

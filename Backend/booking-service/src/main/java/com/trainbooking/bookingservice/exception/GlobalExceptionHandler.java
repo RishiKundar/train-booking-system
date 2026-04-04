@@ -43,5 +43,15 @@ public class GlobalExceptionHandler {
                         "status","500"));
     }
 
+    @ExceptionHandler(BookingFailedException.class)
+    public ResponseEntity<Map<String,Object>> handleOverBooking(BookingFailedException ex){
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error",ex.getMessage()));
+    }
+
+    @ExceptionHandler(ReBookingException.class)
+    public ResponseEntity<Map<String,Object>> handleDuplicateBooking(ReBookingException ex){
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error",ex.getMessage()));
+    }
+
 
 }

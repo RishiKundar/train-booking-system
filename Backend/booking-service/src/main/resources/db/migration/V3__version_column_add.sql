@@ -1,0 +1,1 @@
+ALTER TABLE booking_service.seat_inventory ADD COLUMN version BIGINT UNIQUE NOT NULL;

@@ -9,4 +9,6 @@ public interface AuthService {
     void signUp(SignupRequest signupRequest);
 
     TokenResponse login(LoginRequest loginRequest);
+
+    void createAdmin(SignupRequest signupRequest);
 }

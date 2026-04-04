@@ -1,0 +1,3 @@
+
+ALTER TABLE booking_service.seat_inventory
+DROP CONSTRAINT seat_inventory_version_key;

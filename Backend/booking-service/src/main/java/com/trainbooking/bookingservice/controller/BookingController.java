@@ -7,8 +7,9 @@ import com.trainbooking.bookingservice.service.BookingCommandService;
 import com.trainbooking.bookingservice.service.BookingQueryService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,12 +31,16 @@ public class BookingController {
     }
 
     @PostMapping
-    public Map<String, Object> createBooking(HttpServletRequest httpServletRequest,@Valid @RequestBody CreateBookingRequest request){
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ResponseEntity<Map<String, Object>> createBooking(HttpServletRequest httpServletRequest,
+                                                             @Valid @RequestBody CreateBookingRequest request){
 
         UUID userId = (UUID) httpServletRequest.getAttribute("USER_ID");
 
-        UUID bookingId = bookingCommandService.createBooking(userId,request);
+        UUID bookingId = bookingCommandService.createBookingAsync(userId, request);
 
-        return Map.of("bookingId",bookingId,"status","BOOKED");
+        return ResponseEntity
+                .status(HttpStatus.ACCEPTED)
+                .body(Map.of("bookingId", bookingId, "status", "PENDING"));
     }
 }

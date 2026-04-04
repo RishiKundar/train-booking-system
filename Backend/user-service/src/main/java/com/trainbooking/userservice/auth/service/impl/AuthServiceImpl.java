@@ -43,7 +43,7 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Mobile already registered");
         }
 
-        Role userRole = roleRepository.findByRole("USER")
+        Role userRole = roleRepository.findByRole("ROLE_USER")
                 .orElseThrow( () -> new RuntimeException("Role USER not found"));
 
         User user = User.builder()
@@ -70,5 +70,39 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmailId(loginRequest.getEmail()).orElseThrow(() -> new RuntimeException("User not found"));
 
         return tokenService.generateTokens(user);
+    }
+
+    @Override
+    public void createAdmin(SignupRequest signupRequest) {
+
+        if(userRepository.existsByEmailId(signupRequest.getEmail())){
+            throw new RuntimeException("Email already registered");
+        }
+
+        if(userRepository.existsByUsername(signupRequest.getUsername())){
+            throw new RuntimeException("Username already taken");
+        }
+
+        if(userRepository.existsByMobileNo(signupRequest.getMobileNo())){
+            throw new RuntimeException("Mobile already registered");
+        }
+
+        Role userRole = roleRepository.findByRole("ROLE_ADMIN")
+                .orElseThrow( () -> new RuntimeException("Role USER not found"));
+
+        User user = User.builder()
+                .username(signupRequest.getUsername())
+                .firstName(signupRequest.getFirstName())
+                .middleName(signupRequest.getMiddleName())
+                .lastName(signupRequest.getLastName())
+                .emailId(signupRequest.getEmail())
+                .mobileNo(signupRequest.getMobileNo())
+                .password(passwordEncoder.encode(signupRequest.getPassword()))
+                .roles(Set.of(userRole))
+                .activeFlag(true)
+                .isAccountLocked(false)
+                .build();
+
+        userRepository.save(user);
     }
 }

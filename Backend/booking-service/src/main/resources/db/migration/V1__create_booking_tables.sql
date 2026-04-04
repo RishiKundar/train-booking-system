@@ -1,4 +1,4 @@
-CREATE SCHEMA IF NOT EXISTS booking_service;
+
 
 CREATE TABLE seat_inventory (
     id BIGSERIAL PRIMARY KEY,

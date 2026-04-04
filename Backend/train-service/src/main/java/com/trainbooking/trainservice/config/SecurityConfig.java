@@ -1,4 +1,4 @@
-package com.trainbooking.bookingservice.config;
+package com.trainbooking.trainservice.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -25,4 +25,3 @@ public class SecurityConfig {
                 .build();
     }
 }
-
