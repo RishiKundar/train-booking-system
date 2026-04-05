@@ -1,5 +1,6 @@
 package com.trainbooking.trainservice.route.service;
 
+import com.trainbooking.trainservice.exception.BusinessException;
 import com.trainbooking.trainservice.route.dto.TrainRouteRequest;
 import com.trainbooking.trainservice.route.dto.TrainRouteResponse;
 import com.trainbooking.trainservice.route.dto.TrainSearchResponse;
@@ -10,6 +11,7 @@ import com.trainbooking.trainservice.station.repo.StationRepository;
 import com.trainbooking.trainservice.train.entity.Train;
 import com.trainbooking.trainservice.train.repo.TrainRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalTime;
@@ -28,13 +30,13 @@ public class TrainRouteServiceImpl implements TrainRouteService{
     public TrainRouteResponse addRoute(TrainRouteRequest trainRouteRequest) {
 
         Train train = trainRepository.findById(trainRouteRequest.getTrainId())
-                .orElseThrow(() -> new RuntimeException("Train not found"));
+                .orElseThrow(() -> new BusinessException("Train not found", HttpStatus.NO_CONTENT.value()));
 
         Station station = stationRepository.findById(trainRouteRequest.getStationId())
-                .orElseThrow(() -> new RuntimeException("Station not found"));
+                .orElseThrow(() -> new BusinessException("Station not found", HttpStatus.NO_CONTENT.value()));
 
         if(trainRouteRepository.existsByTrainIdAndStopOrder(trainRouteRequest.getTrainId(),trainRouteRequest.getStopOrder())){
-            throw new RuntimeException("Stop Order already exists for this train");
+            throw new BusinessException("Stop Order already exists for this train", HttpStatus.CONFLICT.value());
         }
 
         TrainRoute trainRoute = new TrainRoute();

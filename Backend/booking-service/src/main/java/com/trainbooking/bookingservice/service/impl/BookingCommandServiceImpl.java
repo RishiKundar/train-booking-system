@@ -1,5 +1,6 @@
 package com.trainbooking.bookingservice.service.impl;
 
+import com.trainbooking.bookingservice.clients.TrainServiceClient;
 import com.trainbooking.bookingservice.dto.CreateBookingRequest;
 import com.trainbooking.bookingservice.entity.Booking;
 import com.trainbooking.bookingservice.entity.BookingStatus;
@@ -8,18 +9,19 @@ import com.trainbooking.bookingservice.event.BookingQueue;
 import com.trainbooking.bookingservice.eventmodel.BookingEvent;
 import com.trainbooking.bookingservice.exception.BookingFailedException;
 import com.trainbooking.bookingservice.exception.InsufficientSeatsException;
-import com.trainbooking.bookingservice.exception.ReBookingException;
+
 import com.trainbooking.bookingservice.repo.BookingRepository;
 import com.trainbooking.bookingservice.repo.SeatInventoryRepository;
 import com.trainbooking.bookingservice.service.BookingCommandService;
+import com.trainbooking.bookingservice.util.PNRGenerator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.dialect.lock.OptimisticEntityLockException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,12 +33,13 @@ public class BookingCommandServiceImpl implements BookingCommandService {
     private final SeatInventoryRepository seatInventoryRepository;
     private final BookingRepository bookingRepository;
     private final BookingQueue bookingQueue;
+    private final TrainServiceClient trainServiceClient;
 
     @Transactional
     @Override
     public UUID createBooking(UUID userId, CreateBookingRequest createBookingRequest) {
         log.info("Inside Create Booking -> userId: {} Train ID: {} Seats: {}", userId,createBookingRequest.trainId(),createBookingRequest.seats());
-        SeatInventory seatInventory = seatInventoryRepository.findForUpdate(createBookingRequest.trainId(),createBookingRequest.travelDate())
+        SeatInventory seatInventory = seatInventoryRepository.findForUpdate(createBookingRequest.trainId(),createBookingRequest.travelDate(),createBookingRequest.seatClass())
                 .orElseThrow(() -> new RuntimeException("Seat Inventory Not Found"));
 
 
@@ -136,6 +139,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
         booking.setUserId(userId);
         booking.setIdempotencyKey(createBookingRequest.idempotencyKey());
         booking.setStatus(BookingStatus.PENDING);
+        booking.setSeatClass(createBookingRequest.seatClass());
         bookingRepository.save(booking);
 
         BookingEvent event = new BookingEvent(
@@ -144,6 +148,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
                 createBookingRequest.trainId(),
                 createBookingRequest.sourceStationId(),
                 createBookingRequest.destinationStationId(),
+                createBookingRequest.seatClass(),
                 createBookingRequest.seats(),
                 createBookingRequest.travelDate()
         );
@@ -164,8 +169,15 @@ public class BookingCommandServiceImpl implements BookingCommandService {
             log.info("Processing booking -> userId: {} trainId: {} seats: {}",
                     bookingEvent.getUserId(), bookingEvent.getTrainId(), bookingEvent.getSeats());
 
+            TrainServiceClient.FareInfo fareInfo = trainServiceClient.getFareInfo(
+                    bookingEvent.getTrainId(),
+                    bookingEvent.getSourceStationId(),
+                    bookingEvent.getDestinationStationId(),
+                    booking.getSeatClass()
+            );
+
             SeatInventory seatInventory = seatInventoryRepository
-                    .findForUpdate(bookingEvent.getTrainId(), bookingEvent.getTravelDate())
+                    .findForUpdate(bookingEvent.getTrainId(), bookingEvent.getTravelDate(),bookingEvent.getSeatClass())
                     .orElseThrow(() -> new RuntimeException("Seat inventory not found"));
 
             if (seatInventory.getAvailableSeats() < bookingEvent.getSeats()) {
@@ -174,11 +186,19 @@ public class BookingCommandServiceImpl implements BookingCommandService {
 
             seatInventory.setAvailableSeats(seatInventory.getAvailableSeats() - bookingEvent.getSeats());
 
+            BigDecimal fare = fareInfo.farePerKm()
+                    .multiply(BigDecimal.valueOf(fareInfo.distanceKm()))
+                    .multiply(BigDecimal.valueOf(bookingEvent.getSeats()));
+
+            // 6. Update booking to CONFIRMED
             booking.setTrainId(bookingEvent.getTrainId());
             booking.setSourceStationId(bookingEvent.getSourceStationId());
             booking.setDestinationStationId(bookingEvent.getDestinationStationId());
             booking.setTravelDate(bookingEvent.getTravelDate());
             booking.setSeatsBooked(bookingEvent.getSeats());
+            booking.setSeatClass(bookingEvent.getSeatClass());
+            booking.setFare(fare);
+            booking.setPnr(PNRGenerator.generatePnr(bookingEvent.getTravelDate()));
             booking.setStatus(BookingStatus.BOOKED);
 
             log.info("Booking confirmed -> bookingId: {}", booking.getId());

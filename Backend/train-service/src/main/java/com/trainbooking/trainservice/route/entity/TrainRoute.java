@@ -1,5 +1,6 @@
 package com.trainbooking.trainservice.route.entity;
 
+import com.trainbooking.trainservice.common.Auditable;
 import com.trainbooking.trainservice.station.entity.Station;
 import com.trainbooking.trainservice.train.entity.Train;
 import jakarta.persistence.*;
@@ -13,7 +14,7 @@ import java.time.LocalTime;
 @Getter
 @Setter
 @Table(name = "train_routes", schema = "train_service")
-public class TrainRoute {
+public class TrainRoute extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,6 +1,7 @@
 package com.trainbooking.trainservice.station.entity;
 
 
+import com.trainbooking.trainservice.common.Auditable;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,7 +10,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-public class Station {
+public class Station extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

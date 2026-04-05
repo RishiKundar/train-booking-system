@@ -3,6 +3,7 @@ package com.trainbooking.trainservice.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
@@ -19,6 +20,15 @@ public class SecurityConfig {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/train/internal/**").permitAll()
+
+                        // ADMIN only for all write operations across ALL train endpoints
+                        .requestMatchers(HttpMethod.POST,   "/train/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT,    "/train/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/train/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH,  "/train/**").hasRole("ADMIN")
+                        // Any authenticated user can read
+                        .requestMatchers(HttpMethod.GET, "/train/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(xUserIdFilter, UsernamePasswordAuthenticationFilter.class)

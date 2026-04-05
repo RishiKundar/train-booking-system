@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -39,8 +40,16 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status;
 
-    @Column(name = "idempotency_key", unique = true)
+    @Column(name = "idempotency_key", unique = true, nullable = false)
     private String idempotencyKey;
 
+    @Column(name = "seat_class", length = 20)
+    private String seatClass;
+
+    @Column(name = "fare", precision = 10, scale = 2)
+    private BigDecimal fare;
+
+    @Column(name = "pnr", unique = true, length = 30)
+    private String pnr;
 
 }

@@ -23,6 +23,9 @@ public class SeatInventory {
     @Column(name = "travel_date", nullable = false)
     private LocalDate travelDate;
 
+    @Column(name = "seat_class", nullable = false, length = 20)
+    private String seatClass;
+
     @Column(name = "total_seats", nullable = false)
     private Integer totalSeats;
 

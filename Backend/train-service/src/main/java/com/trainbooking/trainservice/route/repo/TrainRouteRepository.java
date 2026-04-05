@@ -1,11 +1,13 @@
 package com.trainbooking.trainservice.route.repo;
 
 import com.trainbooking.trainservice.route.entity.TrainRoute;
+import com.trainbooking.trainservice.train.entity.Train;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TrainRouteRepository extends JpaRepository<TrainRoute, Long> {
 
@@ -25,4 +27,6 @@ public interface TrainRouteRepository extends JpaRepository<TrainRoute, Long> {
                   AND r1.stopOrder < r2.stopOrder
             """)
     List<Object[]> searchTrains(@Param("sourceId") Long sourceId, @Param("destinationId") Long destinationId);
+
+    Optional<TrainRoute> findByTrainIdAndStationId(Long trainId, Long stationId);
 }

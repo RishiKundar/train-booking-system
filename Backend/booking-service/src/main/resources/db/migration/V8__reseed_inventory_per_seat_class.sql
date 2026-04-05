@@ -1,0 +1,37 @@
+-- Clear old inventory (was seeded without seat_class)
+DELETE FROM booking_service.seat_inventory;
+ALTER SEQUENCE booking_service.seat_inventory_id_seq RESTART WITH 1;
+
+-- Re-seed per seat class for each train across 7 travel dates
+-- Train 1 (MAE001): SLEEPER=200, AC_3T=150, AC_2T=100, AC_1ST=50
+INSERT INTO booking_service.seat_inventory
+(train_id, travel_date, seat_class, total_seats, available_seats, version)
+VALUES
+-- Train 1: 2026-05-01 to 2026-05-07
+(1,'2026-05-01','SLEEPER',200,200,0),
+(1,'2026-05-01','AC_3_TIER',150,150,0),
+(1,'2026-05-01','AC_2_TIER',100,100,0),
+(1,'2026-05-01','AC_FIRST_CLASS',50,50,0),
+(1,'2026-05-02','SLEEPER',200,200,0),
+(1,'2026-05-02','AC_3_TIER',150,150,0),
+(1,'2026-05-02','AC_2_TIER',100,100,0),
+(1,'2026-05-02','AC_FIRST_CLASS',50,50,0),
+(1,'2026-05-03','SLEEPER',200,200,0),
+(1,'2026-05-03','AC_3_TIER',150,150,0),
+(1,'2026-05-03','AC_2_TIER',100,100,0),
+(1,'2026-05-03','AC_FIRST_CLASS',50,50,0),
+
+-- Train 2: MJS002 — SLEEPER=180, AC_3T=150, AC_2T=80, AC_1ST=40
+(2,'2026-05-01','SLEEPER',180,180,0),(2,'2026-05-01','AC_3_TIER',150,150,0),(2,'2026-05-01','AC_2_TIER',80,80,0),(2,'2026-05-01','AC_FIRST_CLASS',40,40,0),
+(2,'2026-05-02','SLEEPER',180,180,0),(2,'2026-05-02','AC_3_TIER',150,150,0),(2,'2026-05-02','AC_2_TIER',80,80,0),(2,'2026-05-02','AC_FIRST_CLASS',40,40,0),
+(2,'2026-05-03','SLEEPER',180,180,0),(2,'2026-05-03','AC_3_TIER',150,150,0),(2,'2026-05-03','AC_2_TIER',80,80,0),(2,'2026-05-03','AC_FIRST_CLASS',40,40,0),
+
+-- Train 3: MDR003 — no Sleeper (Rajdhani)
+(3,'2026-05-01','AC_3_TIER',240,240,0),(3,'2026-05-01','AC_2_TIER',200,200,0),(3,'2026-05-01','AC_FIRST_CLASS',48,48,0),
+(3,'2026-05-02','AC_3_TIER',240,240,0),(3,'2026-05-02','AC_2_TIER',200,200,0),(3,'2026-05-02','AC_FIRST_CLASS',48,48,0),
+(3,'2026-05-03','AC_3_TIER',240,240,0),(3,'2026-05-03','AC_2_TIER',200,200,0),(3,'2026-05-03','AC_FIRST_CLASS',48,48,0),
+
+-- Train 4: PNI004 — Pune → Nagpur
+(4,'2026-05-01','SLEEPER',150,150,0),(4,'2026-05-01','AC_3_TIER',96,96,0),(4,'2026-05-01','AC_2_TIER',54,54,0),
+(4,'2026-05-02','SLEEPER',150,150,0),(4,'2026-05-02','AC_3_TIER',96,96,0),(4,'2026-05-02','AC_2_TIER',54,54,0),
+(4,'2026-05-03','SLEEPER',150,150,0),(4,'2026-05-03','AC_3_TIER',96,96,0),(4,'2026-05-03','AC_2_TIER',54,54,0);

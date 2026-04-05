@@ -16,6 +16,7 @@ public class BookingEvent {
     private Long trainId;
     private Long sourceStationId;
     private Long destinationStationId;
+    private String seatClass;
     private Integer seats;
     private LocalDate travelDate;
 

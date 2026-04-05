@@ -20,7 +20,11 @@ public record CreateBookingRequest(
         @NotNull(message = "Destination Station Id is required")
         Long destinationStationId,
 
+        @NotNull(message = "Travel Date is required")
         LocalDate travelDate,
+
+        @NotNull(message = "Seat Class is required")
+        String seatClass,
 
         @NotNull(message = "Please select valid seat")
         @Min(value = 1, message = "Seat count should be at least 1")

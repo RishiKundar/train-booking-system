@@ -18,10 +18,14 @@ public interface SeatInventoryRepository extends JpaRepository<SeatInventory, Lo
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-            SELECT s FROM SeatInventory s 
-            WHERE s.trainId = :trainId
-                AND s.travelDate = :travelDate
-            """)
-    Optional<SeatInventory> findForUpdate(@Param("trainId") Long trainId,
-                                          @Param("travelDate") LocalDate travelDate);
+          SELECT s from SeatInventory s 
+                    where s.trainId = :trainId 
+                    and s.travelDate = :travelDate
+                    and s.seatClass = :seatClass
+           """ )
+    Optional<SeatInventory> findForUpdate(
+            @Param("trainId") Long trainId,
+            @Param("travelDate") LocalDate travelDate,
+            @Param("seatClass") String seatClass
+            );
 }
