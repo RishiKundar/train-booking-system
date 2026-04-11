@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface BookingQueryService {
 
     List<BookingResponse> getBookingForUser(UUID userId);
+
+    BookingResponse getBookingByPnr(String pnr, UUID userId);
 }

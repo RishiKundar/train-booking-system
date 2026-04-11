@@ -12,4 +12,6 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<Booking> findByUserId(UUID userId);
 
     Optional<Booking> findByIdempotencyKey(String idempotencyKey);
+
+    Optional<Booking> findByPnrAndUserId(String pnr, UUID userId);
 }

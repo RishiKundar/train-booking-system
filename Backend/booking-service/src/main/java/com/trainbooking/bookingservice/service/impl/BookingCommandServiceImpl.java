@@ -7,7 +7,9 @@ import com.trainbooking.bookingservice.entity.BookingStatus;
 import com.trainbooking.bookingservice.entity.SeatInventory;
 import com.trainbooking.bookingservice.event.BookingQueue;
 import com.trainbooking.bookingservice.eventmodel.BookingEvent;
+import com.trainbooking.bookingservice.exception.BookingException;
 import com.trainbooking.bookingservice.exception.BookingFailedException;
+import com.trainbooking.bookingservice.exception.BusinessException;
 import com.trainbooking.bookingservice.exception.InsufficientSeatsException;
 
 import com.trainbooking.bookingservice.repo.BookingRepository;
@@ -18,10 +20,14 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -153,7 +159,15 @@ public class BookingCommandServiceImpl implements BookingCommandService {
                 createBookingRequest.travelDate()
         );
 
-        bookingQueue.publish(event);
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        bookingQueue.publish(event);
+                        log.info("Inside Transactional Manager After Commit method with booking id -> {}", bookingId);
+                    }
+                }
+        );
 
         return bookingId;
     }
@@ -163,22 +177,22 @@ public class BookingCommandServiceImpl implements BookingCommandService {
     public void processBooking(BookingEvent bookingEvent) {
 
         Booking booking = bookingRepository.findById(bookingEvent.getBookingId())
-                .orElseThrow(() -> new RuntimeException("Booking ID is not available"));
+                .orElseThrow(() -> new BookingException("Booking ID is not available", HttpStatus.NOT_FOUND));
 
         try {
             log.info("Processing booking -> userId: {} trainId: {} seats: {}",
                     bookingEvent.getUserId(), bookingEvent.getTrainId(), bookingEvent.getSeats());
 
             TrainServiceClient.FareInfo fareInfo = trainServiceClient.getFareInfo(
-                    bookingEvent.getTrainId(),
-                    bookingEvent.getSourceStationId(),
-                    bookingEvent.getDestinationStationId(),
+                    bookingEvent.getTrainId().toString(),
+                    bookingEvent.getSourceStationId().toString(),
+                    bookingEvent.getDestinationStationId().toString(),
                     booking.getSeatClass()
             );
 
             SeatInventory seatInventory = seatInventoryRepository
                     .findForUpdate(bookingEvent.getTrainId(), bookingEvent.getTravelDate(),bookingEvent.getSeatClass())
-                    .orElseThrow(() -> new RuntimeException("Seat inventory not found"));
+                    .orElseThrow(() -> new BookingException("Seat inventory not found",HttpStatus.NOT_FOUND));
 
             if (seatInventory.getAvailableSeats() < bookingEvent.getSeats()) {
                 throw new InsufficientSeatsException("Not Enough seats Available");
@@ -209,6 +223,33 @@ public class BookingCommandServiceImpl implements BookingCommandService {
         }
 
         bookingRepository.save(booking);
+    }
+
+    @Transactional
+    @Override
+    public void cancelBooking(String pnr, UUID userId) {
+        Booking booking = bookingRepository.findByPnrAndUserId(pnr,userId)
+                .orElseThrow(() -> new BusinessException("Booking not found with PNR : " + pnr));
+
+        if(booking.getStatus() != BookingStatus.BOOKED){
+            throw new BusinessException("Only Confirmed Booking can be cancelled. Current Booking status is " + booking.getStatus());
+        }
+
+        if(!booking.getTravelDate().isAfter(LocalDate.now())){
+            throw new BusinessException("Cannot Cancel a booking for past or today's travel Date");
+        }
+
+        SeatInventory seatInventory = seatInventoryRepository.findForUpdate(booking.getTrainId(),booking.getTravelDate(),booking.getSeatClass())
+                .orElseThrow(() -> new BusinessException("Seat Inventory cannot be found"));
+
+        seatInventory.setAvailableSeats(seatInventory.getAvailableSeats() + booking.getSeatsBooked());
+
+        booking.setStatus(BookingStatus.CANCELLED);
+
+        bookingRepository.save(booking);
+        seatInventoryRepository.save(seatInventory);
+
+        log.info("Booking is cancelled -> PNR {}, seats restored {}", pnr, booking.getSeatsBooked());
     }
 
 }

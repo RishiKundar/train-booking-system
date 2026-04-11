@@ -14,4 +14,6 @@ public interface BookingCommandService {
     UUID createBookingAsync(UUID userId, CreateBookingRequest createBookingRequest);
 
     void processBooking(BookingEvent bookingEvent);
+
+    void cancelBooking(String pnr, UUID userId);
 }

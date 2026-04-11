@@ -20,8 +20,8 @@ public class TrainServiceClient {
         this.restClient = RestClient.builder().baseUrl(trainServiceURL).build();
     }
 
-    public FareInfo getFareInfo(Long trainId, Long sourceId, Long destinationId, String seatClass){
-        return restClient.get().uri("/train/internal/fare-info?trainId={t}&sourceStationId{s}&destinationStationId={d}&seatClass={c}"
+    public FareInfo getFareInfo(String trainId, String sourceId, String destinationId, String seatClass){
+        return restClient.get().uri("/train/internal/fare-info?trainId={t}&sourceStationId={s}&destinationStationId={d}&seatClass={c}"
         ,trainId,sourceId,destinationId,seatClass).retrieve().body(FareInfo.class);
     }
 
