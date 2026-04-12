@@ -13,6 +13,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,9 +44,15 @@ public class BookingController {
         @ApiResponse(responseCode = "200", description = "Bookings returned successfully"),
         @ApiResponse(responseCode = "401", description = "Unauthorized — JWT token missing or invalid")
     })
-    public List<BookingResponse> getMyBookings(HttpServletRequest httpServletRequest) {
-        UUID userId = UUID.fromString(httpServletRequest.getAttribute("userId").toString());
-        return bookingQueryService.getBookingForUser(userId);
+    public Page<BookingResponse> getMyBookings(
+            HttpServletRequest httpServletRequest,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page,size, Sort.by("travelDate").descending());
+
+        UUID userId = UUID.fromString(httpServletRequest.getAttribute("USER_ID").toString());
+        return bookingQueryService.getBookingForUser(userId,pageable);
     }
 
     @PostMapping
@@ -62,7 +72,7 @@ public class BookingController {
             HttpServletRequest httpServletRequest,
             @Valid @RequestBody CreateBookingRequest request
     ) {
-        UUID userId = UUID.fromString(httpServletRequest.getAttribute("userId").toString());
+        UUID userId = UUID.fromString(httpServletRequest.getAttribute("USER_ID").toString());
         UUID bookingId = bookingCommandService.createBookingAsync(userId, request);
         return ResponseEntity
                 .status(HttpStatus.ACCEPTED)

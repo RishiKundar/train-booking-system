@@ -19,5 +19,6 @@ public class BookingEvent {
     private String seatClass;
     private Integer seats;
     private LocalDate travelDate;
+    private String correlationId;
 
 }

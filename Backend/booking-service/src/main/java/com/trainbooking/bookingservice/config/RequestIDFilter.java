@@ -27,7 +27,7 @@ public class RequestIDFilter extends OncePerRequestFilter {
         try{
             filterChain.doFilter(request,response);
         }finally {
-            MDC.clear();
+            MDC.remove("requestId");
         }
 
     }

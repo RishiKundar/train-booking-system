@@ -8,6 +8,8 @@ import com.trainbooking.trainservice.train.entity.Train;
 import com.trainbooking.trainservice.train.entity.TrainSeatConfig;
 import com.trainbooking.trainservice.train.repo.TrainRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,10 +55,7 @@ public class TrainServiceImpl implements TrainService{
 
     @Override
     @Transactional(readOnly = true)
-    public List<TrainResponse> getAllTrains() {
-        return trainRepository.findAll()
-                .stream()
-                .map(TrainObjectMapper::toResponse)
-                .toList();
+    public Page<TrainResponse> getAllTrains(Pageable pageable) {
+        return trainRepository.findAll(pageable).map(TrainObjectMapper::toResponse);
     }
 }

@@ -7,6 +7,8 @@ import com.trainbooking.bookingservice.repo.BookingRepository;
 import com.trainbooking.bookingservice.service.BookingQueryService;
 import com.trainbooking.bookingservice.util.ObjectMapping;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,10 +25,8 @@ public class BookingQueryServiceImpl implements BookingQueryService {
     private final BookingRepository bookingRepository;
 
     @Override
-    public List<BookingResponse> getBookingForUser(UUID userId) {
-        return bookingRepository.findByUserId(userId)
-                .stream()
-                .map(ObjectMapping::toResponse).toList();
+    public Page<BookingResponse> getBookingForUser(UUID userId, Pageable pageable) {
+        return bookingRepository.findByUserId(userId,pageable).map(ObjectMapping::toResponse);
     }
 
     @Override

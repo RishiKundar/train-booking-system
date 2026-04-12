@@ -2,6 +2,8 @@ package com.trainbooking.trainservice.route.repo;
 
 import com.trainbooking.trainservice.route.entity.TrainRoute;
 import com.trainbooking.trainservice.train.entity.Train;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,7 +13,7 @@ import java.util.Optional;
 
 public interface TrainRouteRepository extends JpaRepository<TrainRoute, Long> {
 
-    List<TrainRoute> findByTrainIdOrderByStopOrder(Long trainId);
+    Page<TrainRoute> findByTrainIdOrderByStopOrder(Long trainId, Pageable pageable);
 
     boolean existsByTrainIdAndStopOrder(Long trainId, Integer stopOrder);
 
@@ -26,7 +28,7 @@ public interface TrainRouteRepository extends JpaRepository<TrainRoute, Long> {
                   AND r2.station.id = :destinationId
                   AND r1.stopOrder < r2.stopOrder
             """)
-    List<Object[]> searchTrains(@Param("sourceId") Long sourceId, @Param("destinationId") Long destinationId);
+    Page<Object[]> searchTrains(@Param("sourceId") Long sourceId, @Param("destinationId") Long destinationId, Pageable pageable);
 
     Optional<TrainRoute> findByTrainIdAndStationId(Long trainId, Long stationId);
 }

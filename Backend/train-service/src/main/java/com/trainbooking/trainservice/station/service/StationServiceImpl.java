@@ -5,6 +5,8 @@ import com.trainbooking.trainservice.station.dto.StationResponse;
 import com.trainbooking.trainservice.station.entity.Station;
 import com.trainbooking.trainservice.station.repo.StationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -41,16 +43,14 @@ public class StationServiceImpl implements StationService{
     }
 
     @Override
-    public List<StationResponse> getAllStation() {
-        return stationRepository.findAll()
-                .stream()
+    public Page<StationResponse> getAllStation(Pageable pageable) {
+        return stationRepository.findAll(pageable)
                 .map( s -> new StationResponse(
                         s.getId(),
                         s.getName(),
                         s.getCode(),
                         s.getCity(),
                         s.getState()
-                ))
-                .toList();
+                ));
     }
 }

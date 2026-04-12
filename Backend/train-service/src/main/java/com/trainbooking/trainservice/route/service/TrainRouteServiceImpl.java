@@ -11,6 +11,8 @@ import com.trainbooking.trainservice.station.repo.StationRepository;
 import com.trainbooking.trainservice.train.entity.Train;
 import com.trainbooking.trainservice.train.repo.TrainRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -61,9 +63,8 @@ public class TrainRouteServiceImpl implements TrainRouteService{
     }
 
     @Override
-    public List<TrainRouteResponse> getRoutesByTrain(Long trainId) {
-        return trainRouteRepository.findByTrainIdOrderByStopOrder(trainId)
-                .stream()
+    public Page<TrainRouteResponse> getRoutesByTrain(Long trainId, Pageable pageable) {
+        return trainRouteRepository.findByTrainIdOrderByStopOrder(trainId, pageable)
                 .map(route -> new TrainRouteResponse(
                         route.getId(),
                         route.getTrain().getId(),
@@ -72,14 +73,12 @@ public class TrainRouteServiceImpl implements TrainRouteService{
                         route.getArrivalTime(),
                         route.getDepartureTime(),
                         route.getDistanceFromSource()
-                ))
-                .toList();
+                ));
     }
 
     @Override
-    public List<TrainSearchResponse> searchTrains(Long sourceStationId, Long destinationStationId) {
-        return trainRouteRepository.searchTrains(sourceStationId,destinationStationId)
-                .stream()
+    public Page<TrainSearchResponse> searchTrains(Long sourceStationId, Long destinationStationId,Pageable pageable) {
+        return trainRouteRepository.searchTrains(sourceStationId,destinationStationId, pageable)
                 .map( row -> new TrainSearchResponse(
                         (Long) row[0],
                         (String) row[1],
@@ -88,6 +87,6 @@ public class TrainRouteServiceImpl implements TrainRouteService{
                         (LocalTime) row[4],
                         (Long) row[5],
                         (LocalTime) row[6]
-                )).toList();
+                ));
     }
 }

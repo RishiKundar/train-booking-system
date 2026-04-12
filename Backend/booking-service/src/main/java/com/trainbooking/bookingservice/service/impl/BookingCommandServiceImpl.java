@@ -19,6 +19,7 @@ import com.trainbooking.bookingservice.util.PNRGenerator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -148,6 +149,8 @@ public class BookingCommandServiceImpl implements BookingCommandService {
         booking.setSeatClass(createBookingRequest.seatClass());
         bookingRepository.save(booking);
 
+        String correlationId = MDC.get("correlationId");
+
         BookingEvent event = new BookingEvent(
                 bookingId,
                 userId,
@@ -156,7 +159,8 @@ public class BookingCommandServiceImpl implements BookingCommandService {
                 createBookingRequest.destinationStationId(),
                 createBookingRequest.seatClass(),
                 createBookingRequest.seats(),
-                createBookingRequest.travelDate()
+                createBookingRequest.travelDate(),
+                correlationId
         );
 
         TransactionSynchronizationManager.registerSynchronization(
@@ -175,6 +179,11 @@ public class BookingCommandServiceImpl implements BookingCommandService {
     @Override
     @Transactional
     public void processBooking(BookingEvent bookingEvent) {
+
+        if(bookingEvent.getCorrelationId() != null){
+            MDC.put("correlationId", bookingEvent.getCorrelationId());
+        }
+
 
         Booking booking = bookingRepository.findById(bookingEvent.getBookingId())
                 .orElseThrow(() -> new BookingException("Booking ID is not available", HttpStatus.NOT_FOUND));
@@ -216,13 +225,15 @@ public class BookingCommandServiceImpl implements BookingCommandService {
             booking.setStatus(BookingStatus.BOOKED);
 
             log.info("Booking confirmed -> bookingId: {}", booking.getId());
+            log.debug("CorrelationId -> {}", bookingEvent.getCorrelationId());
 
         } catch (Exception e) {
             log.error("Booking processing failed for bookingId: {}", bookingEvent.getBookingId(), e);
             booking.setStatus(BookingStatus.FAILED);
+        }finally {
+            MDC.remove("correlationId");
+            bookingRepository.save(booking);
         }
-
-        bookingRepository.save(booking);
     }
 
     @Transactional

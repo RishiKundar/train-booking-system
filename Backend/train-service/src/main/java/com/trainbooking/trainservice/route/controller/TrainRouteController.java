@@ -12,6 +12,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,11 +56,15 @@ public class TrainRouteController {
         @ApiResponse(responseCode = "401", description = "Unauthorized — JWT token missing or invalid"),
         @ApiResponse(responseCode = "404", description = "Train not found")
     })
-    public ResponseEntity<List<TrainRouteResponse>> getRoutes(
+    public ResponseEntity<Page<TrainRouteResponse>> getRoutes(
             @Parameter(description = "ID of the train", example = "1")
-            @PathVariable Long trainId
+            @PathVariable Long trainId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        return ResponseEntity.ok(trainRouteService.getRoutesByTrain(trainId));
+        Pageable pageable = PageRequest.of(page,size);
+
+        return ResponseEntity.ok(trainRouteService.getRoutesByTrain(trainId,pageable));
     }
 
     @GetMapping("/search")
@@ -69,12 +77,15 @@ public class TrainRouteController {
         @ApiResponse(responseCode = "400", description = "Missing or invalid station IDs"),
         @ApiResponse(responseCode = "401", description = "Unauthorized — JWT token missing or invalid")
     })
-    public ResponseEntity<List<TrainSearchResponse>> searchTrains(
+    public ResponseEntity<Page<TrainSearchResponse>> searchTrains(
             @Parameter(description = "ID of the source (departure) station", example = "1")
             @RequestParam("sourceStationId") Long sourceStationId,
             @Parameter(description = "ID of the destination (arrival) station", example = "4")
-            @RequestParam("destinationStationId") Long destinationStationId
+            @RequestParam("destinationStationId") Long destinationStationId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        return ResponseEntity.ok(trainRouteService.searchTrains(sourceStationId, destinationStationId));
+        Pageable pageable = PageRequest.of(page,size);
+        return ResponseEntity.ok(trainRouteService.searchTrains(sourceStationId, destinationStationId,pageable));
     }
 }
