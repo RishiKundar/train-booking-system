@@ -12,6 +12,7 @@ import com.trainbooking.bookingservice.exception.BookingFailedException;
 import com.trainbooking.bookingservice.exception.BusinessException;
 import com.trainbooking.bookingservice.exception.InsufficientSeatsException;
 
+import com.trainbooking.bookingservice.kafka.BookingKafkaProducer;
 import com.trainbooking.bookingservice.repo.BookingRepository;
 import com.trainbooking.bookingservice.repo.SeatInventoryRepository;
 import com.trainbooking.bookingservice.service.BookingCommandService;
@@ -41,6 +42,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
     private final BookingRepository bookingRepository;
     private final BookingQueue bookingQueue;
     private final TrainServiceClient trainServiceClient;
+    private final BookingKafkaProducer bookingKafkaProducer;
 
     @Transactional
     @Override
@@ -167,8 +169,8 @@ public class BookingCommandServiceImpl implements BookingCommandService {
                 new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        bookingQueue.publish(event);
-                        log.info("Inside Transactional Manager After Commit method with booking id -> {}", bookingId);
+                        bookingKafkaProducer.publish(event);
+                        log.info("Booking event going to Kafka Producer -> bookingId: {}", bookingId);
                     }
                 }
         );

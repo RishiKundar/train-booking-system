@@ -1,0 +1,127 @@
+networks:
+  train-booking-network:
+    driver: bridge
+
+services:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # API Gateway
+  # ─────────────────────────────────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    image: train-booking/api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      JWT_SECRET: ${JWT_SECRET}
+      USER_SERVICE_URL: http://user-service:8081
+      TRAIN_SERVICE_URL: http://train-service:8082
+      BOOKING_SERVICE_URL: http://booking-service:8083
+    networks:
+      - train-booking-network
+    depends_on:
+      - user-service
+      - train-service
+      - booking-service
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # User Service
+  # ─────────────────────────────────────────────────────────────────────────
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    image: train-booking/user-service:latest
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      JWT_SECRET: ${JWT_SECRET}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      USER_DB_URL: ${USER_DB_URL}
+    networks:
+      - train-booking-network
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Train Service
+  # ─────────────────────────────────────────────────────────────────────────
+  train-service:
+    build:
+      context: ./train-service
+      dockerfile: Dockerfile
+    image: train-booking/train-service:latest
+    container_name: train-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      JWT_SECRET: ${JWT_SECRET}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      TRAIN_DB_URL: ${TRAIN_DB_URL}
+    networks:
+      - train-booking-network
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Booking Service
+  # ─────────────────────────────────────────────────────────────────────────
+  booking-service:
+    build:
+      context: ./booking-service
+      dockerfile: Dockerfile
+    image: train-booking/booking-service:latest
+    container_name: booking-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      JWT_SECRET: ${JWT_SECRET}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      BOOKING_DB_URL: ${BOOKING_DB_URL}
+      SERVICES_TRAIN_URL: http://train-service:8082
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - train-booking-network
+    depends_on:
+      - kafka
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Kafka : Zookeeper
+  # ─────────────────────────────────────────────────────────────────────────
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - train-booking-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - train-booking-network
+

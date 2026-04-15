@@ -1,0 +1,19 @@
+# Maven build output (we rebuild inside Docker anyway)
+target/
+
+# IDE files (irrelevant inside container)
+.idea/
+*.iml
+.vscode/
+
+# Git metadata
+.git/
+.gitignore
+
+# Local env files (NEVER bake secrets into images)
+.env
+*.env
+
+# Logs
+*.log
+logs/

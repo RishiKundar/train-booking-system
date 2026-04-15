@@ -3,6 +3,7 @@ package com.trainbooking.bookingservice.exception;
 
 
 import com.trainbooking.bookingservice.dto.ErrorResponse;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -69,6 +70,15 @@ public class GlobalExceptionHandler {
                 "error",ex,
                 "timestamp", Instant.now(),
                 "status",HttpStatus.CONFLICT.value()
+        ));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String,Object>> handleDuplicate(DataIntegrityViolationException ex){
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error","Duplicate Booking",
+                "timestamp", Instant.now(),
+                "status", HttpStatus.CONFLICT.value()
         ));
     }
 
