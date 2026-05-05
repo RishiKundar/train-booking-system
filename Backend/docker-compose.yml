@@ -21,12 +21,14 @@ services:
       USER_SERVICE_URL: http://user-service:8081
       TRAIN_SERVICE_URL: http://train-service:8082
       BOOKING_SERVICE_URL: http://booking-service:8083
+      PAYMENT_SERVICE_URL: http://payment-service:8084
     networks:
       - train-booking-network
     depends_on:
       - user-service
       - train-service
       - booking-service
+      - payment-service
     restart: unless-stopped
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -124,4 +126,30 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
       - train-booking-network
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Payment Service
+  # ─────────────────────────────────────────────────────────────────────────
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    image: train-booking/payment-service:latest
+    container_name: payment-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PAYMENT_DB_URL: ${PAYMENT_DB_URL}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_SECRET_KEY: ${RAZORPAY_SECRET_KEY}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - train-booking-network
+    depends_on:
+      - kafka
+    restart: unless-stopped
 

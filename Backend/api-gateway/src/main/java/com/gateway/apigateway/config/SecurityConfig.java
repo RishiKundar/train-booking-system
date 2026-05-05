@@ -28,6 +28,7 @@ public class SecurityConfig {
                 .securityContextRepository(securityContextRepository)
                 .authorizeExchange( exchange -> exchange
                         .pathMatchers("/api/auth/**").permitAll()
+                        .pathMatchers("/payments/webhook").permitAll()
                         .pathMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyExchange().authenticated()
                 )

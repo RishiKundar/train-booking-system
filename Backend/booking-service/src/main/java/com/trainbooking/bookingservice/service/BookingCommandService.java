@@ -16,4 +16,8 @@ public interface BookingCommandService {
     void processBooking(BookingEvent bookingEvent);
 
     void cancelBooking(String pnr, UUID userId);
+
+    void confirmBookingAfterPayment(UUID bookingId);
+
+    void handlePaymentFailure(UUID bookingId);
 }

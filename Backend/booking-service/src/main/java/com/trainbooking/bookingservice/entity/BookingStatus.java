@@ -2,8 +2,10 @@ package com.trainbooking.bookingservice.entity;
 
 public enum BookingStatus {
 
-    BOOKED,
     PENDING,
+    PAYMENT_PENDING,
+    CONFIRMED,
     FAILED,
+    PAYMENT_FAILED,
     CANCELLED
 }

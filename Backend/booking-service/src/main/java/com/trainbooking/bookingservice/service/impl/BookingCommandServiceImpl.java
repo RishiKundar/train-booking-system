@@ -66,7 +66,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
         booking.setDestinationStationId(createBookingRequest.destinationStationId());
         booking.setTravelDate(createBookingRequest.travelDate());
         booking.setSeatsBooked(createBookingRequest.seats());
-        booking.setStatus(BookingStatus.BOOKED);
+        booking.setStatus(BookingStatus.CONFIRMED);
 
         bookingRepository.save(booking);
         log.info("Booking Confirmed -> booking_id:{} ", booking.getId().toString());
@@ -101,7 +101,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
         booking.setDestinationStationId(createBookingRequest.destinationStationId());
         booking.setTravelDate(createBookingRequest.travelDate());
         booking.setSeatsBooked(createBookingRequest.seats());
-        booking.setStatus(BookingStatus.BOOKED);
+        booking.setStatus(BookingStatus.PAYMENT_PENDING);
         booking.setIdempotencyKey(createBookingRequest.idempotencyKey());
 
         bookingRepository.save(booking);
@@ -224,7 +224,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
             booking.setSeatClass(bookingEvent.getSeatClass());
             booking.setFare(fare);
             booking.setPnr(PNRGenerator.generatePnr(bookingEvent.getTravelDate()));
-            booking.setStatus(BookingStatus.BOOKED);
+            booking.setStatus(BookingStatus.CONFIRMED);
 
             log.info("Booking confirmed -> bookingId: {}", booking.getId());
             log.debug("CorrelationId -> {}", bookingEvent.getCorrelationId());
@@ -244,7 +244,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
         Booking booking = bookingRepository.findByPnrAndUserId(pnr,userId)
                 .orElseThrow(() -> new BusinessException("Booking not found with PNR : " + pnr));
 
-        if(booking.getStatus() != BookingStatus.BOOKED){
+        if(booking.getStatus() != BookingStatus.CONFIRMED){
             throw new BusinessException("Only Confirmed Booking can be cancelled. Current Booking status is " + booking.getStatus());
         }
 
@@ -263,6 +263,46 @@ public class BookingCommandServiceImpl implements BookingCommandService {
         seatInventoryRepository.save(seatInventory);
 
         log.info("Booking is cancelled -> PNR {}, seats restored {}", pnr, booking.getSeatsBooked());
+    }
+
+    @Transactional
+    @Override
+    public void confirmBookingAfterPayment(UUID bookingId){
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new BookingException("Booking not found: " + bookingId, HttpStatus.NOT_FOUND));
+
+        if(booking.getStatus() != BookingStatus.PAYMENT_PENDING){
+            log.warn("confirmBookingAfterPayment called on booking with status {}: {}", booking.getStatus(), booking);
+            return;
+        }
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+        log.info("Booking CONFIRMED after payment -> bookingId:{}", bookingId);
+    }
+
+    @Transactional
+    @Override
+    public void handlePaymentFailure(UUID bookingId){
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new BookingException("Booking not found: " + bookingId, HttpStatus.NOT_FOUND));
+
+        if(booking.getStatus() != BookingStatus.PAYMENT_PENDING){
+            log.warn("handlePaymentFailure called on booking with status {}: {}", booking.getStatus(), booking);
+            return;
+        }
+
+        SeatInventory seatInventory = seatInventoryRepository.findForUpdate(booking.getTrainId(),booking.getTravelDate(), booking.getSeatClass())
+                        .orElseThrow(null);
+
+        if(seatInventory != null){
+            seatInventory.setAvailableSeats(seatInventory.getAvailableSeats() + booking.getSeatsBooked());
+            seatInventoryRepository.save(seatInventory);
+        }
+
+        booking.setStatus(BookingStatus.PAYMENT_FAILED);
+        bookingRepository.save(booking);
+        log.info("Booking PAYMENT_FAILED, seats Released : {} | BookingId: {}",booking.getSeatsBooked(), bookingId);
     }
 
 }
