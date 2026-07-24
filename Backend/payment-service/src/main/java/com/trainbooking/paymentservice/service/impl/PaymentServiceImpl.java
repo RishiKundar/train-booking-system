@@ -64,7 +64,7 @@ public class PaymentServiceImpl implements PaymentService {
             JSONObject orderRequest = new JSONObject();
             orderRequest.put("amount", createOrderRequest.amountInPaise());
             orderRequest.put("currency", "INR");
-            orderRequest.put("receipt", "booking_"+createOrderRequest.bookingId());
+            orderRequest.put("receipt", "bkg_"+createOrderRequest.bookingId());
             orderRequest.put("payment_capture",1);
 
             Order order = razorpayClient.orders.create(orderRequest);
@@ -75,7 +75,7 @@ public class PaymentServiceImpl implements PaymentService {
             payment.setId(UUID.randomUUID());
             payment.setBookingId(createOrderRequest.bookingId());
             payment.setRazorpayOrderId(razorpayOrderId);
-            payment.setAmount(BigDecimal.valueOf(createOrderRequest.amountInPaise(), 2));
+            payment.setAmount(BigDecimal.valueOf(createOrderRequest.amountInPaise()));
             payment.setCurrency("INR");
             payment.setStatus(PaymentStatus.CREATED);
             paymentRepository.save(payment);

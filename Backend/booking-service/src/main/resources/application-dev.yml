@@ -1,0 +1,50 @@
+server:
+  port: 8083
+
+service:
+  schema:
+    name: booking_service
+
+services:
+  train:
+    url: http://localhost:8082
+
+spring:
+  application:
+    name: booking-service
+
+  kafka:
+    bootstrap-servers: localhost:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: booking-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.trainbooking.bookingservice.eventmodel"
+
+  datasource:
+    url: jdbc:postgresql://ep-frosty-bird-a1i1lnsi-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require&currentSchema=booking_service
+    username: neondb_owner
+    password: npg_gnGOhT2Xwj0q
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        default_schema: ${service.schema.name}
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    schemas: ${service.schema.name}
+    default-schema: ${service.schema.name}
+
+jwt:
+  secret: OJcK5HC4vK2741s0zvDqUyXo9AVg0U6ijPzhlaLqiej

@@ -84,7 +84,9 @@ public class BookingCommandServiceImpl implements BookingCommandService {
             return existingBooking.get().getId();
         }
 
-        SeatInventory seatInventory = seatInventoryRepository.findByTrainIdAndTravelDate(createBookingRequest.trainId(),createBookingRequest.travelDate()).orElseThrow(() -> new RuntimeException("Not able to Find Trains"));
+        SeatInventory seatInventory = seatInventoryRepository
+                .findForUpdate(createBookingRequest.trainId(), createBookingRequest.travelDate(), createBookingRequest.seatClass())
+                .orElseThrow(() -> new InsufficientSeatsException("No seat inventory found for class: " + createBookingRequest.seatClass()));
 
         if(seatInventory.getAvailableSeats() < createBookingRequest.seats()){
             throw new InsufficientSeatsException("Not Enough seats Available");
@@ -224,7 +226,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
             booking.setSeatClass(bookingEvent.getSeatClass());
             booking.setFare(fare);
             booking.setPnr(PNRGenerator.generatePnr(bookingEvent.getTravelDate()));
-            booking.setStatus(BookingStatus.CONFIRMED);
+            booking.setStatus(BookingStatus.PAYMENT_PENDING);
 
             log.info("Booking confirmed -> bookingId: {}", booking.getId());
             log.debug("CorrelationId -> {}", bookingEvent.getCorrelationId());
@@ -293,7 +295,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
         }
 
         SeatInventory seatInventory = seatInventoryRepository.findForUpdate(booking.getTrainId(),booking.getTravelDate(), booking.getSeatClass())
-                        .orElseThrow(null);
+                        .orElse(null);
 
         if(seatInventory != null){
             seatInventory.setAvailableSeats(seatInventory.getAvailableSeats() + booking.getSeatsBooked());

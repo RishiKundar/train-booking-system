@@ -1,0 +1,41 @@
+server:
+  port: 8084
+
+service:
+  schema:
+    name: payment_service
+
+spring:
+  application:
+    name: payment-service
+
+  kafka:
+    bootstrap-servers: localhost:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+  datasource:
+    url: jdbc:postgresql://ep-frosty-bird-a1i1lnsi-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require&currentSchema=payment_service
+    username: neondb_owner
+    password: npg_gnGOhT2Xwj0q
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        default_schema: ${service.schema.name}
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    schemas: ${service.schema.name}
+    default-schema: ${service.schema.name}
+
+razorpay:
+  key-id: rzp_test_Steg4dFPI38ChS
+  key-secret: Lh14OtyOqdtFHcHy5XrhOkkM
+  webhook-secret: 2cb9197b22a0dc8c2885fc9c73bd7598

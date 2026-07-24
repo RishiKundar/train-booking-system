@@ -9,11 +9,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface SeatInventoryRepository extends JpaRepository<SeatInventory, Long> {
 
-    Optional<SeatInventory> findByTrainIdAndTravelDate(Long trainId, LocalDate travelDate);
+    List<SeatInventory> findByTrainIdAndTravelDate(Long trainId, LocalDate travelDate);
 
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

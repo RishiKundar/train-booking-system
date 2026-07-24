@@ -2,6 +2,7 @@ package com.gateway.apigateway.config;
 
 import com.gateway.apigateway.service.JwtService;
 import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -13,6 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
+@Slf4j
 @Component
 public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
 
@@ -30,6 +32,7 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
 
             String userId = claims.getSubject();
             List<String> roles = claims.get("roles",List.class);
+            if(roles == null) roles = List.of();
 
             List<SimpleGrantedAuthority> authorities = roles.stream()
                     .map(SimpleGrantedAuthority::new)
@@ -41,8 +44,8 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
 
 
         } catch (Exception e) {
-            Mono.empty();
+            log.error("JWT Authentication Failed : {} ", e.getMessage());
+            return Mono.empty();
         }
-        return Mono.empty();
     }
 }

@@ -94,7 +94,7 @@ public class BookingController {
             @PathVariable String pnr,
             HttpServletRequest request
     ) {
-        UUID userId = UUID.fromString(request.getAttribute("userId").toString());
+        UUID userId = UUID.fromString(request.getAttribute("USER_ID").toString());
         return ResponseEntity.ok(bookingQueryService.getBookingByPnr(pnr, userId));
     }
 
@@ -114,7 +114,7 @@ public class BookingController {
             @PathVariable String pnr,
             HttpServletRequest httpServletRequest
     ) {
-        UUID userId = UUID.fromString(httpServletRequest.getAttribute("userId").toString());
+        UUID userId = UUID.fromString(httpServletRequest.getAttribute("USER_ID").toString());
         bookingCommandService.cancelBooking(pnr, userId);
         return ResponseEntity.ok(Map.of(
                 "pnr", pnr,

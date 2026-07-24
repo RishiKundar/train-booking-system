@@ -18,6 +18,9 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(BookingException.class)
     public ResponseEntity<ErrorResponse> handleBooking(BookingException ex){
         return ResponseEntity.status(ex.getStatus())
@@ -36,8 +39,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String,Object>> handleGeneric(Exception ex){
+        log.error("Unhandled exception: {}", ex.getMessage(), ex); // ← now visible in logs
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).
                 body(Map.of("error","Something Went Wrong",
+                        "message", ex.getMessage() != null ? ex.getMessage() : "null",
                         "timestamp", LocalDateTime.now(),
                         "status","500"
                 ));
@@ -51,7 +56,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", errorMsg
                 ,"timestamp",LocalDateTime.now(),
-                        "status","500"));
+                        "status","400")); // ← was wrongly "500"
     }
 
     @ExceptionHandler(BookingFailedException.class)
@@ -67,9 +72,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<Map<String,Object>> handleBusinessException(BusinessException ex){
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
-                "error",ex,
+                "error", ex.getMessage(), // ← was putting the whole object, not message
                 "timestamp", Instant.now(),
-                "status",HttpStatus.CONFLICT.value()
+                "status", HttpStatus.CONFLICT.value()
         ));
     }
 

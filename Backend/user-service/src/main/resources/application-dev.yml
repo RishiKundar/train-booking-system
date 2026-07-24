@@ -1,0 +1,35 @@
+server:
+  port: 8081
+
+service:
+  schema:
+    name: user_service
+
+spring:
+  application:
+    name: user-service
+
+  datasource:
+    url: jdbc:postgresql://ep-frosty-bird-a1i1lnsi-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require&currentSchema=user_service
+    username: neondb_owner
+    password: npg_gnGOhT2Xwj0q
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        default_schema: ${service.schema.name}
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    schemas: ${service.schema.name}
+    default-schema: ${service.schema.name}
+
+jwt:
+  secret: OJcK5HC4vK2741s0zvDqUyXo9AVg0U6ijPzhlaLqiej
+  access-token-expiry: 15m
+  refresh-token-expiry: 7d
