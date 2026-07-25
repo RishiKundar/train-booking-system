@@ -1,6 +1,7 @@
 package com.trainbooking.bookingservice.config;
 
 import com.trainbooking.bookingservice.eventmodel.BookingEvent;
+import com.trainbooking.bookingservice.eventmodel.NotificationEvent;
 import com.trainbooking.bookingservice.eventmodel.PaymentEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -41,6 +42,22 @@ public class KafkaConfig {
     @Bean
     public KafkaTemplate<String, BookingEvent> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
+    }
+
+
+    @Bean
+    public ProducerFactory<String, NotificationEvent> notificationEventProducerFactory(){
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, true);
+        return new DefaultKafkaProducerFactory<>(config);
+    }
+
+    @Bean
+    public KafkaTemplate<String, NotificationEvent> notificationEventKafkaTemplate(){
+        return new KafkaTemplate<>(notificationEventProducerFactory());
     }
 
     // ── Consumer ──────────────────────────────────────────────────────────────

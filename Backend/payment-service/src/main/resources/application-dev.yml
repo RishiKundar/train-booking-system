@@ -36,6 +36,9 @@ spring:
     default-schema: ${service.schema.name}
 
 razorpay:
-  key-id: rzp_test_Steg4dFPI38ChS
-  key-secret: Lh14OtyOqdtFHcHy5XrhOkkM
-  webhook-secret: 2cb9197b22a0dc8c2885fc9c73bd7598
+  key-id: ${RAZORPAY_KEY_ID}
+  key-secret: ${RAZORPAY_KEY_SECRET}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
+
+checkout:
+  base-url: http://localhost:8080

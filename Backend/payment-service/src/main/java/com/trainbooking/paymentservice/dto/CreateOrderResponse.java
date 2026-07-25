@@ -7,6 +7,7 @@ public record CreateOrderResponse(
         String razorpayOrderId,
         Long amount,
         String currency,
-        String keyId
+        String keyId,
+        String checkoutUrl
 ) {
 }

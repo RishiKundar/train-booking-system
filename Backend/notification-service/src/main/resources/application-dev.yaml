@@ -1,0 +1,38 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: notification-service
+
+  kafka:
+    bootstrap-servers: localhost:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+    properties:
+      spring.json.trusted.packages: "*"
+
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: 2369955d93f9cc
+    password: 703ef2135426d3
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+default:
+  mail-from: trainbooking@test.com
+
+services:
+  user:
+    url: http://localhost:8081

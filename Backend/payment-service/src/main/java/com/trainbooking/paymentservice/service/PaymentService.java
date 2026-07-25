@@ -14,4 +14,6 @@ public interface PaymentService {
     void handleWebhook(String payload, String razorpaySignature);
 
     Optional<Payment> getPaymentByBookingId(UUID bookingId);
+
+    String getCheckoutPage(String orderId);
 }

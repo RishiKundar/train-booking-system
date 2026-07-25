@@ -7,12 +7,14 @@ import com.trainbooking.bookingservice.entity.BookingStatus;
 import com.trainbooking.bookingservice.entity.SeatInventory;
 import com.trainbooking.bookingservice.event.BookingQueue;
 import com.trainbooking.bookingservice.eventmodel.BookingEvent;
+import com.trainbooking.bookingservice.eventmodel.NotificationEvent;
 import com.trainbooking.bookingservice.exception.BookingException;
 import com.trainbooking.bookingservice.exception.BookingFailedException;
 import com.trainbooking.bookingservice.exception.BusinessException;
 import com.trainbooking.bookingservice.exception.InsufficientSeatsException;
 
 import com.trainbooking.bookingservice.kafka.BookingKafkaProducer;
+import com.trainbooking.bookingservice.kafka.NotificationKafkaProducer;
 import com.trainbooking.bookingservice.repo.BookingRepository;
 import com.trainbooking.bookingservice.repo.SeatInventoryRepository;
 import com.trainbooking.bookingservice.service.BookingCommandService;
@@ -43,6 +45,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
     private final BookingQueue bookingQueue;
     private final TrainServiceClient trainServiceClient;
     private final BookingKafkaProducer bookingKafkaProducer;
+    private final NotificationKafkaProducer notificationKafkaProducer;
 
     @Transactional
     @Override
@@ -265,6 +268,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
         seatInventoryRepository.save(seatInventory);
 
         log.info("Booking is cancelled -> PNR {}, seats restored {}", pnr, booking.getSeatsBooked());
+        notificationKafkaProducer.publish(buildNotificationEvent(booking,"CANCELLED"));
     }
 
     @Transactional
@@ -281,6 +285,7 @@ public class BookingCommandServiceImpl implements BookingCommandService {
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
         log.info("Booking CONFIRMED after payment -> bookingId:{}", bookingId);
+        notificationKafkaProducer.publish(buildNotificationEvent(booking,"CONFIRMED"));
     }
 
     @Transactional
@@ -305,6 +310,20 @@ public class BookingCommandServiceImpl implements BookingCommandService {
         booking.setStatus(BookingStatus.PAYMENT_FAILED);
         bookingRepository.save(booking);
         log.info("Booking PAYMENT_FAILED, seats Released : {} | BookingId: {}",booking.getSeatsBooked(), bookingId);
+        notificationKafkaProducer.publish(buildNotificationEvent(booking,"PAYMENT_FAILED"));
+    }
+
+    private NotificationEvent buildNotificationEvent(Booking booking, String status){
+        return NotificationEvent.builder()
+                .bookingId(booking.getId())
+                .userId(booking.getUserId())
+                .pnr(booking.getPnr())
+                .trainId(booking.getTrainId())
+                .travelDate(booking.getTravelDate())
+                .fare(booking.getFare())
+                .seats(booking.getSeatsBooked())
+                .status(status)
+                .build();
     }
 
 }

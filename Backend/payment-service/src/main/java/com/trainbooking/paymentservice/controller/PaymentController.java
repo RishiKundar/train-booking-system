@@ -7,6 +7,7 @@ import com.trainbooking.paymentservice.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,12 +31,20 @@ public class PaymentController {
         return ResponseEntity.ok(response);
     }
 
+//    @PostMapping("/webhook")
+//    public ResponseEntity<Void> webhook(
+//            @RequestBody String payload,
+//            @RequestHeader("X-Razorpay-Signature") String signature
+//    ){
+//        paymentService.handleWebhook(payload,signature);
+//        return ResponseEntity.ok().build();
+//    }
+
     @PostMapping("/webhook")
     public ResponseEntity<Void> webhook(
-            @RequestBody String payload,
-            @RequestHeader("X-Razorpay-Signature") String signature
+            @RequestBody String payload
     ){
-        paymentService.handleWebhook(payload,signature);
+        paymentService.handleWebhook(payload,null);
         return ResponseEntity.ok().build();
     }
 
@@ -50,4 +59,10 @@ public class PaymentController {
                         )
                 ).orElse(ResponseEntity.notFound().build());
     }
+
+    @GetMapping(value = "/checkout/{bookingId}", produces = MediaType.TEXT_HTML_VALUE)
+    public String razorpayCheckoutPage(@PathVariable String bookingId){
+        return paymentService.getCheckoutPage(bookingId);
+    }
+
 }

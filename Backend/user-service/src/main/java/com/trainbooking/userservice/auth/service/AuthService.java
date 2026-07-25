@@ -11,4 +11,5 @@ public interface AuthService {
     TokenResponse login(LoginRequest loginRequest);
 
     void createAdmin(SignupRequest signupRequest);
+
 }
