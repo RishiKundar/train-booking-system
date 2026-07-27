@@ -19,7 +19,7 @@ public class UserController {
 
     private final UserRepository userRepository;
 
-    @GetMapping("/{id}")
+    @GetMapping("/internal/{id}")
     public ResponseEntity<UserResponse> getUserById(@PathVariable UUID id){
         return userRepository.findById(id).map(user -> new UserResponse(user.getId(),
                 user.getFirstName(),

@@ -28,8 +28,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String requestPath = request.getRequestURI();
 
-        // Allow auth endpoints through without requiring X-User-Id
-        if (requestPath.startsWith("/api/auth/")) {
+        // Allow auth and internal endpoints through without requiring X-User-Id
+        if (requestPath.startsWith("/api/auth/") || requestPath.startsWith("/api/users/internal/")) {
             filterChain.doFilter(request, response);
             return;
         }

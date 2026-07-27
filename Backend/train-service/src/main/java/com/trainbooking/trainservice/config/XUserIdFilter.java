@@ -26,6 +26,10 @@ public class XUserIdFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
+        // Allow internal endpoints, auth, and ALL CORS preflight OPTIONS requests to pass through
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
         return path.startsWith("/train/internal");
     }
 

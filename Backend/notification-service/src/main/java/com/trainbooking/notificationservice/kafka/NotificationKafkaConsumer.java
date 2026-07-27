@@ -32,7 +32,7 @@ public class NotificationKafkaConsumer {
         log.info("Received notification event for BookingId: {}", notificationEvent.getBookingId());
         try{
             ResponseEntity<UserResponse> userResponse =
-                    restTemplate.getForEntity(USER_SERVICE_URL+"/api/users/"+notificationEvent.getUserId(),
+                    restTemplate.getForEntity(USER_SERVICE_URL+"/api/users/internal/"+notificationEvent.getUserId(),
                             UserResponse.class);
             if(!userResponse.getStatusCode().is2xxSuccessful() || userResponse.getBody() == null){
                 log.error("Could not fetch user details for UserId: {}", notificationEvent.getUserId());

@@ -18,16 +18,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
+                .cors(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-
                         .requestMatchers("/train/internal/**").permitAll()
-
                         // ADMIN only for all write operations across ALL train endpoints
                         .requestMatchers(HttpMethod.POST,   "/train/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT,    "/train/**").hasRole("ADMIN")

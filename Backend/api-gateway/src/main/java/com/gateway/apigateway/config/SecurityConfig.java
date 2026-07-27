@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.reactive.config.EnableWebFlux;
@@ -22,6 +23,7 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(@NotNull ServerHttpSecurity httpSecurity){
 
         return httpSecurity
+                .cors(cors -> corsConfigurationSource())
                 .csrf(csrf -> csrf.disable())
                 .httpBasic( h -> h.disable())
                 .formLogin(form -> form.disable())
@@ -38,5 +40,17 @@ public class SecurityConfig {
                             return exchange.getResponse().setComplete();
                         }))
                 .build();
+    }
+    @Bean
+    public org.springframework.web.cors.reactive.CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
+        configuration.setAllowedOrigins(java.util.List.of("http://localhost:5173", "http://localhost:4200"));
+        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setAllowCredentials(true);
+        
+        org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
