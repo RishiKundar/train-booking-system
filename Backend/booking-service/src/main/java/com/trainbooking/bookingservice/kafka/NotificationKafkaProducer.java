@@ -14,11 +14,15 @@ public class NotificationKafkaProducer {
 
     private static final String TOPIC = "notification-events";
 
-    private final KafkaTemplate<String, NotificationEvent> notificationEventKafkaTemplate;
+    private final KafkaTemplate<String, NotificationEvent> kafkaTemplate;
 
     public void publish(NotificationEvent notificationEvent){
-        log.info("Publishing NotificationEvent for BookingId: {} Status: {}", notificationEvent.getBookingId(), notificationEvent.getStatus());
-        notificationEventKafkaTemplate.send(TOPIC,notificationEvent.getBookingId().toString(),notificationEvent);
+        try {
+            log.info("Publishing NotificationEvent for BookingId: {} Status: {}", notificationEvent.getBookingId(), notificationEvent.getStatus());
+            kafkaTemplate.send(TOPIC, notificationEvent.getBookingId().toString(), notificationEvent);
+        } catch (Exception e) {
+            log.error("Failed to publish notification event to Kafka: {}", e.getMessage(), e);
+        }
     }
 
 }

@@ -17,8 +17,14 @@ public class BookingKafkaProducer {
     private final KafkaTemplate<String, BookingEvent> kafkaTemplate;
 
     public void publish(BookingEvent bookingEvent){
-        log.info("[{}] Publishing to Kafka -> bookingId : {} ", bookingEvent.getCorrelationId(), bookingEvent.getBookingId());
-        kafkaTemplate.send(TOPIC,bookingEvent.getBookingId().toString(), bookingEvent);
-
+        try {
+            log.info("[{}] Publishing to Kafka -> bookingId : {} ", bookingEvent.getCorrelationId(), bookingEvent.getBookingId());
+            kafkaTemplate.send(TOPIC, bookingEvent.getBookingId().toString(), bookingEvent);
+        } catch (Exception e) {
+            log.error("Failed to publish booking event to Kafka: {}", e.getMessage(), e);
+            if (e.getCause() != null) {
+                log.error("Root cause: {}", e.getCause().getMessage(), e.getCause());
+            }
+        }
     }
 }

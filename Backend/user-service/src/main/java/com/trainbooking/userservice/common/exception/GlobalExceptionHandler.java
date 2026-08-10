@@ -52,14 +52,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<ApiErrorResponse> handleAuthException(AuthException ex){
         return ResponseEntity.badRequest()
-                .body(new ApiErrorResponse(false, ex.getErrorCode(),ex.getMessage()));
+                .body(new ApiErrorResponse(false, ex.getErrorCode(), ex.getMessage()));
     }
 
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ApiErrorResponse> handleRuntimeException(RuntimeException ex){
+        return ResponseEntity.badRequest()
+                .body(new ApiErrorResponse(false, "APP_001", ex.getMessage()));
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneric(Exception ex){
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiErrorResponse(false,"GENERIC_001","Something went wrong"));
+                .body(new ApiErrorResponse(false,"GENERIC_001", ex.getMessage() != null ? ex.getMessage() : "Something went wrong"));
     }
 }
+
 

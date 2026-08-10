@@ -51,7 +51,7 @@ public class BookingController {
     ) {
         Pageable pageable = PageRequest.of(page,size, Sort.by("travelDate").descending());
 
-        UUID userId = UUID.fromString(httpServletRequest.getAttribute("USER_ID").toString());
+        UUID userId = (UUID) httpServletRequest.getAttribute("USER_ID");
         return bookingQueryService.getBookingForUser(userId,pageable);
     }
 
@@ -72,7 +72,7 @@ public class BookingController {
             HttpServletRequest httpServletRequest,
             @Valid @RequestBody CreateBookingRequest request
     ) {
-        UUID userId = UUID.fromString(httpServletRequest.getAttribute("USER_ID").toString());
+        UUID userId = (UUID) httpServletRequest.getAttribute("USER_ID");
         UUID bookingId = bookingCommandService.createBookingAsync(userId, request);
         return ResponseEntity
                 .status(HttpStatus.ACCEPTED)
@@ -94,7 +94,7 @@ public class BookingController {
             @PathVariable String pnr,
             HttpServletRequest request
     ) {
-        UUID userId = UUID.fromString(request.getAttribute("USER_ID").toString());
+        UUID userId = (UUID) request.getAttribute("USER_ID");
         return ResponseEntity.ok(bookingQueryService.getBookingByPnr(pnr, userId));
     }
 
@@ -114,7 +114,7 @@ public class BookingController {
             @PathVariable String pnr,
             HttpServletRequest httpServletRequest
     ) {
-        UUID userId = UUID.fromString(httpServletRequest.getAttribute("USER_ID").toString());
+        UUID userId = (UUID) httpServletRequest.getAttribute("USER_ID");
         bookingCommandService.cancelBooking(pnr, userId);
         return ResponseEntity.ok(Map.of(
                 "pnr", pnr,

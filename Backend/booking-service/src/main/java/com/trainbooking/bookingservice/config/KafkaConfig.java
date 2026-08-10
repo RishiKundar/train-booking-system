@@ -34,7 +34,6 @@ public class KafkaConfig {
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-        // Embed type info so the consumer knows how to deserialize
         config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, true);
         return new DefaultKafkaProducerFactory<>(config);
     }
@@ -43,7 +42,6 @@ public class KafkaConfig {
     public KafkaTemplate<String, BookingEvent> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
-
 
     @Bean
     public ProducerFactory<String, NotificationEvent> notificationEventProducerFactory(){

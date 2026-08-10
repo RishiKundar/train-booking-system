@@ -19,6 +19,11 @@ public class XUserIdFilter extends OncePerRequestFilter {
     private static final String X_USER_ID = "X-User-Id";
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return request.getMethod().equalsIgnoreCase("OPTIONS");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {

@@ -32,19 +32,19 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void signUp(SignupRequest signupRequest) {
         if(userRepository.existsByEmailId(signupRequest.getEmail())){
-            throw new RuntimeException("Email already registered");
+            throw new AuthException("Email is already registered. Please sign in or use another email.", "AUTH_004");
         }
 
         if(userRepository.existsByUsername(signupRequest.getUsername())){
-            throw new RuntimeException("Username already taken");
+            throw new AuthException("Username is already taken. Please choose another username.", "AUTH_005");
         }
 
         if(userRepository.existsByMobileNo(signupRequest.getMobileNo())){
-            throw new RuntimeException("Mobile already registered");
+            throw new AuthException("Mobile number is already registered. Please use another number.", "AUTH_006");
         }
 
         Role userRole = roleRepository.findByRole("ROLE_USER")
-                .orElseThrow( () -> new RuntimeException("Role USER not found"));
+                .orElseThrow( () -> new AuthException("Role USER not configured in database", "AUTH_007"));
 
         User user = User.builder()
                 .username(signupRequest.getUsername())

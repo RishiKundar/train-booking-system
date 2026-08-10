@@ -36,9 +36,15 @@ public class JwtTokenProvider {
     public String generateAccessToken(User user){
         Instant now = Instant.now();
         Instant expiry = now.plus(jwtProperties.getAccessTokenExpiry());
+        String fullName = ((user.getFirstName() != null ? user.getFirstName() : "") + " " + (user.getLastName() != null ? user.getLastName() : "")).trim();
 
         return Jwts.builder()
                 .setSubject(user.getId().toString())
+                .claim("email", user.getEmailId())
+                .claim("username", user.getUsername())
+                .claim("firstName", user.getFirstName())
+                .claim("lastName", user.getLastName())
+                .claim("fullName", !fullName.isEmpty() ? fullName : user.getUsername())
                 .claim("roles", user.getRoles().stream().map(role -> role.getRole()).collect(Collectors.toList()))
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(expiry))

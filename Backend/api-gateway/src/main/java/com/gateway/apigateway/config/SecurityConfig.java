@@ -29,6 +29,7 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .securityContextRepository(securityContextRepository)
                 .authorizeExchange( exchange -> exchange
+                        .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll()
                         .pathMatchers("/api/auth/**").permitAll()
                         .pathMatchers("/payments/webhook").permitAll()
                         .pathMatchers("/api/admin/**").hasRole("ADMIN")
