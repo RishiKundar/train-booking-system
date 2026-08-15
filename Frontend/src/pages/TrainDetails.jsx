@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Train, ArrowLeft, Calendar, Users, CheckCircle2, AlertTriangle, 
-    Loader2, ShieldCheck, MapPin, Clock, CreditCard, Sparkles, Navigation 
+    Loader2, ShieldCheck, MapPin, Clock, CreditCard, Sparkles, Navigation, Zap 
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
-import { SeatClassBadge } from '../components/Badge';
+import { SeatClassBadge, TrainTypeBadge } from '../components/Badge';
 
 const TrainDetails = () => {
     const { trainId } = useParams();
@@ -45,6 +45,16 @@ const TrainDetails = () => {
     const [bookingId, setBookingId] = useState(null);
     const [bookingResult, setBookingResult] = useState(null);
     const [bookingError, setBookingError] = useState('');
+    
+    // Track interval for memory cleanup
+    const pollIntervalRef = useRef(null);
+
+    // Cleanup interval on unmount
+    useEffect(() => {
+        return () => {
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        };
+    }, []);
 
     // Fetch initial train and stations metadata
     useEffect(() => {
@@ -143,6 +153,41 @@ const TrainDetails = () => {
         return Math.round(farePerKm * estimatedDistance * Number(seats || 1));
     }, [farePerKm, estimatedDistance, seats]);
 
+    // Generate 7 upcoming days for the calendar strip
+    const upcomingDays = useMemo(() => {
+        const days = [];
+        for (let i = 1; i <= 7; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() + i);
+            days.push({
+                dateString: d.toISOString().split('T')[0],
+                dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                dayNumber: d.getDate(),
+                monthName: d.toLocaleDateString('en-US', { month: 'short' })
+            });
+        }
+        return days;
+    }, []);
+
+    // Auto-correct invalid destination if source changes
+    useEffect(() => {
+        if (!routeStops || routeStops.length === 0 || !sourceStationId) return;
+        const srcIdx = routeStops.findIndex(s => s.stationId?.toString() === sourceStationId?.toString());
+        
+        // Use a functional state update to safely check the current destination without adding it to deps
+        setDestinationStationId(currentDest => {
+            const destIdx = routeStops.findIndex(s => s.stationId?.toString() === currentDest?.toString());
+            if (destIdx <= srcIdx) {
+                if (srcIdx + 1 < routeStops.length) {
+                    return routeStops[srcIdx + 1].stationId.toString();
+                } else {
+                    return '';
+                }
+            }
+            return currentDest; // Keep existing if valid
+        });
+    }, [sourceStationId, routeStops]);
+
     // Selected class available seats count
     let availableCount = null;
     if (availability && availability.seatAvailabilities) {
@@ -158,6 +203,17 @@ const TrainDetails = () => {
         if (!sourceStationId || !destinationStationId) {
             showToast("Please select source and destination stations.", "warning");
             return;
+        }
+
+        // Basic route direction validation
+        if (routeStops && routeStops.length > 0) {
+            const srcIdx = routeStops.findIndex(s => s.stationId?.toString() === sourceStationId?.toString());
+            const destIdx = routeStops.findIndex(s => s.stationId?.toString() === destinationStationId?.toString());
+            
+            if (srcIdx !== -1 && destIdx !== -1 && srcIdx >= destIdx) {
+                showToast("Invalid direction: Arrival station must be after departure station on this train's route.", "error");
+                return;
+            }
         }
 
         setIsBooking(true);
@@ -187,7 +243,7 @@ const TrainDetails = () => {
             // 3. Poll for Kafka event processing & PNR generation
             let attempts = 0;
             const maxAttempts = 15;
-            const pollInterval = setInterval(async () => {
+            pollIntervalRef.current = setInterval(async () => {
                 attempts++;
                 try {
                     const myBookingsPage = await api.get('/booking/bookings/my', { params: { page: 0, size: 10 } });
@@ -196,7 +252,7 @@ const TrainDetails = () => {
 
                     if (activeBooking) {
                         if (activeBooking.status === 'PAYMENT_PENDING' || activeBooking.status === 'CONFIRMED') {
-                            clearInterval(pollInterval);
+                            clearInterval(pollIntervalRef.current);
                             setBookingResult(activeBooking);
                             setBookingStage('success');
                             showToast(`Seat reserved! PNR: ${activeBooking.pnr}`, 'success');
@@ -206,7 +262,7 @@ const TrainDetails = () => {
                                 navigate(`/payment/${activeBooking.pnr}`);
                             }, 1500);
                         } else if (activeBooking.status === 'FAILED') {
-                            clearInterval(pollInterval);
+                            clearInterval(pollIntervalRef.current);
                             setBookingStage('failed');
                             setBookingError('Booking could not be confirmed due to seat unavailability.');
                             showToast('Seat allocation failed: Insufficient seats.', 'error');
@@ -214,11 +270,11 @@ const TrainDetails = () => {
                     }
 
                     if (attempts >= maxAttempts) {
-                        clearInterval(pollInterval);
+                        clearInterval(pollIntervalRef.current);
                         if (bookingStage !== 'success') {
                             setBookingStage('success'); // allow viewing in dashboard
                             showToast('Booking is queued. Check your dashboard for status updates.', 'info');
-                            setTimeout(() => navigate('/'), 2000);
+                            setTimeout(() => navigate('/dashboard'), 2000);
                         }
                     }
                 } catch (pollErr) {
@@ -237,8 +293,8 @@ const TrainDetails = () => {
     if (loading) {
         return (
             <div style={styles.centerBox}>
-                <Loader2 size={40} color="#38BDF8" className="spin" />
-                <p style={{ marginTop: '1rem', color: '#94A3B8' }}>Loading Train Configuration...</p>
+                <div className="spin" style={{ fontSize: '3rem' }}>🚆</div>
+                <p style={{ marginTop: '1.25rem', color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 600 }}>Loading Express Train Parameters...</p>
             </div>
         );
     }
@@ -246,8 +302,8 @@ const TrainDetails = () => {
     if (!train) {
         return (
             <div style={styles.centerBox}>
-                <Train size={48} color="#F43F5E" />
-                <h2 style={{ color: '#F8FAFC', marginTop: '1rem' }}>Train Not Found</h2>
+                <Train size={54} color="#F43F5E" />
+                <h2 className="font-display" style={{ color: 'var(--text-main)', marginTop: '1rem' }}>Train Not Found</h2>
                 <button onClick={() => navigate('/search')} className="btn-secondary" style={{ marginTop: '1rem' }}>
                     Return to Search
                 </button>
@@ -261,8 +317,8 @@ const TrainDetails = () => {
                 {/* Back Button */}
                 <div style={styles.topNav}>
                     <button onClick={() => navigate(-1)} style={styles.backBtn}>
-                        <ArrowLeft size={20} />
-                        <span>Back to Search</span>
+                        <ArrowLeft size={18} />
+                        <span>Return to Search</span>
                     </button>
                 </div>
 
@@ -272,21 +328,21 @@ const TrainDetails = () => {
                         <div style={styles.trainHeaderCard}>
                             <div style={styles.trainMeta}>
                                 <div style={styles.trainIconBox}>
-                                    <Train size={32} color="#070B12" />
+                                    <Train size={34} color="#FFFFFF" />
                                 </div>
                                 <div>
-                                    <h1 style={styles.trainTitle}>{train.name}</h1>
-                                    <div style={styles.trainSubRow}>
-                                        <span style={styles.trainCodeBadge}>{train.code}</span>
-                                        <span style={styles.typeBadge}>{train.trainType}</span>
+                                    <div style={styles.badgeRow}>
+                                        <span style={styles.trainCodeBadge} className="font-mono">{train.code}</span>
+                                        <TrainTypeBadge type={train.trainType} />
                                     </div>
+                                    <h1 className="font-display" style={styles.trainTitle}>{train.name}</h1>
                                 </div>
                             </div>
                         </div>
 
                         {/* Station Route Pickers */}
                         <div style={styles.sectionCard}>
-                            <h3 style={styles.cardHeading}>Select Journey Route</h3>
+                            <h3 className="font-display" style={styles.cardHeading}>Select Journey Route</h3>
                             <div style={styles.stationsRow}>
                                 <div style={styles.inputGroup}>
                                     <label style={styles.label}>
@@ -298,11 +354,20 @@ const TrainDetails = () => {
                                         onChange={(e) => setSourceStationId(e.target.value)}
                                         style={styles.select}
                                     >
-                                        {stations.map(st => (
-                                            <option key={`src-${st.id}`} value={st.id}>
-                                                {st.name} ({st.code}) - {st.city}
-                                            </option>
-                                        ))}
+                                        <option value="" disabled>Select Departure</option>
+                                        {routeStops.length > 0 ? (
+                                            routeStops.map((stop, idx) => {
+                                                const st = stations.find(s => s.id?.toString() === stop.stationId?.toString());
+                                                if (!st || idx === routeStops.length - 1) return null; // Can't depart from final stop
+                                                return (
+                                                    <option key={`src-${st.id}`} value={st.id}>
+                                                        {st.name} ({st.code})
+                                                    </option>
+                                                );
+                                            })
+                                        ) : (
+                                            <option value="" disabled>Loading Route...</option>
+                                        )}
                                     </select>
                                 </div>
 
@@ -316,11 +381,24 @@ const TrainDetails = () => {
                                         onChange={(e) => setDestinationStationId(e.target.value)}
                                         style={styles.select}
                                     >
-                                        {stations.map(st => (
-                                            <option key={`dest-${st.id}`} value={st.id}>
-                                                {st.name} ({st.code}) - {st.city}
-                                            </option>
-                                        ))}
+                                        <option value="" disabled>Select Arrival</option>
+                                        {routeStops.length > 0 ? (
+                                            routeStops.map((stop, idx) => {
+                                                const st = stations.find(s => s.id?.toString() === stop.stationId?.toString());
+                                                if (!st) return null;
+
+                                                const sourceIdx = routeStops.findIndex(s => s.stationId?.toString() === sourceStationId?.toString());
+                                                const isInvalid = sourceIdx !== -1 && idx <= sourceIdx;
+
+                                                return (
+                                                    <option key={`dest-${st.id}`} value={st.id} disabled={isInvalid}>
+                                                        {st.name} ({st.code})
+                                                    </option>
+                                                );
+                                            })
+                                        ) : (
+                                            <option value="" disabled>Loading Route...</option>
+                                        )}
                                     </select>
                                 </div>
                             </div>
@@ -329,7 +407,10 @@ const TrainDetails = () => {
                         {/* Route Stops Timeline */}
                         {routeStops.length > 0 && (
                             <div style={styles.sectionCard}>
-                                <h3 style={styles.cardHeading}>Train Schedule & Stops</h3>
+                                <div style={styles.stopsHeader}>
+                                    <h3 className="font-display" style={styles.cardHeading}>Train Schedule & Stops</h3>
+                                    <span style={styles.stopsBadge}>{routeStops.length} Halts</span>
+                                </div>
                                 <div style={styles.stopsTimeline}>
                                     {routeStops.map((stop, idx) => (
                                         <div key={idx} style={styles.stopTimelineItem}>
@@ -342,9 +423,9 @@ const TrainDetails = () => {
                                                     <span style={styles.stopStation}>
                                                         {getStationName(stop.stationId) || `Station #${stop.stationId}`}
                                                     </span>
-                                                    <span style={styles.stopDistance}>{stop.distanceFromSource ?? stop.distanceFromSourceKm ?? 0} km</span>
+                                                    <span style={styles.stopDistance} className="font-mono">{stop.distanceFromSource ?? stop.distanceFromSourceKm ?? 0} km</span>
                                                 </div>
-                                                <div style={styles.stopTiming}>
+                                                <div style={styles.stopTiming} className="font-mono">
                                                     <span>Arr: {stop.arrivalTime ? stop.arrivalTime.substring(0, 5) : '--:--'}</span>
                                                     <span>•</span>
                                                     <span>Dep: {stop.departureTime ? stop.departureTime.substring(0, 5) : '--:--'}</span>
@@ -362,48 +443,92 @@ const TrainDetails = () => {
                         <div style={styles.bookingCard}>
                             <div style={styles.bookingCardHeader}>
                                 <div>
-                                    <h2 style={styles.bookingTitle}>Configure Reservation</h2>
+                                    <h2 className="font-display" style={styles.bookingTitle}>Configure Reservation</h2>
                                     <p style={styles.bookingSubtitle}>Lock seats with atomic consistency</p>
                                 </div>
                                 <ShieldCheck size={28} color="#38BDF8" />
                             </div>
 
-                            {/* Date Picker */}
+                            {/* 7-Day Live Availability Calendar Strip */}
                             <div style={styles.inputGroup}>
-                                <label style={styles.label}>
-                                    <Calendar size={15} color="#F59E0B" />
-                                    <span>Travel Date</span>
-                                </label>
-                                <input 
-                                    type="date"
-                                    value={travelDate}
-                                    min={new Date().toISOString().split('T')[0]}
-                                    onChange={(e) => setTravelDate(e.target.value)}
-                                    style={styles.dateInput}
-                                    required
-                                />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <label style={styles.label}>
+                                        <Calendar size={15} color="#F59E0B" />
+                                        <span>Select Departure Date</span>
+                                    </label>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Next 7 Days</span>
+                                </div>
+                                <div style={styles.calendarStrip}>
+                                    {upcomingDays.map((day) => {
+                                        const isSelected = travelDate === day.dateString;
+                                        return (
+                                            <div 
+                                                key={day.dateString}
+                                                onClick={() => setTravelDate(day.dateString)}
+                                                style={{
+                                                    ...styles.calendarDayCard,
+                                                    backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--glass-bg-subtle)',
+                                                    borderColor: isSelected ? 'var(--accent-primary)' : 'var(--glass-border)',
+                                                    color: isSelected ? '#fff' : 'var(--text-main)',
+                                                }}
+                                            >
+                                                <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', opacity: 0.8, fontWeight: 700 }}>{day.dayName}</span>
+                                                <span className="font-display" style={{ fontSize: '1.25rem', margin: '0.15rem 0', fontWeight: 800 }}>{day.dayNumber}</span>
+                                                <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>{day.monthName}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             {/* Class Selector */}
                             <div style={styles.inputGroup}>
-                                <label style={styles.label}>Select Class</label>
+                                <label style={styles.label}>Select Coach Class</label>
                                 <div style={styles.classSelectorGrid}>
                                     {train.seatConfigResponseList?.map((sc) => {
                                         const isSelected = seatClass === sc.seatClass;
                                         const rate = sc.fairPerKm || sc.farePerKm || 1.2;
+                                        
+                                        let classAvail = null;
+                                        if (availability && availability.availabilityByClass) {
+                                            const count = availability.availabilityByClass[sc.seatClass];
+                                            if (count !== undefined && count !== null) {
+                                                classAvail = count;
+                                            }
+                                        }
+
                                         return (
                                             <div
                                                 key={sc.seatClass}
                                                 onClick={() => setSeatClass(sc.seatClass)}
                                                 style={{
                                                     ...styles.classOption,
-                                                    borderColor: isSelected ? '#38BDF8' : 'rgba(255, 255, 255, 0.08)',
-                                                    background: isSelected ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                                                    boxShadow: isSelected ? '0 0 15px rgba(56, 189, 248, 0.2)' : 'none'
+                                                    borderColor: isSelected ? 'var(--accent-primary)' : 'var(--glass-border)',
+                                                    background: isSelected ? 'rgba(56, 189, 248, 0.15)' : 'var(--glass-bg-subtle)',
+                                                    boxShadow: isSelected ? '0 0 16px rgba(56, 189, 248, 0.25)' : 'none',
+                                                    position: 'relative'
                                                 }}
                                             >
                                                 <SeatClassBadge seatClass={sc.seatClass} />
-                                                <div style={styles.classFareText}>₹{rate}/km</div>
+                                                <div style={styles.classFareText} className="font-mono">₹{rate}/km</div>
+                                                
+                                                <div style={{ marginTop: '0.2rem', textAlign: 'center' }}>
+                                                    {checkingAvailability ? (
+                                                        <span style={{ fontSize: '0.68rem', color: 'var(--accent-primary)' }}><Loader2 size={10} className="spin" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }}/> Checking...</span>
+                                                    ) : classAvail !== null ? (
+                                                        <span style={{ 
+                                                            fontSize: '0.75rem', 
+                                                            fontWeight: 800, 
+                                                            color: classAvail >= seats ? '#10B981' : '#F43F5E' 
+                                                        }}>
+                                                            {classAvail > 0 ? `AVL ${classAvail}` : 'WAITLIST'}
+                                                        </span>
+                                                    ) : travelDate ? (
+                                                        <span style={{ fontSize: '0.68rem', color: '#F43F5E', fontWeight: 600 }}>Not Available</span>
+                                                    ) : (
+                                                        <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Select Date</span>
+                                                    )}
+                                                </div>
                                             </div>
                                         );
                                     })}
@@ -414,61 +539,47 @@ const TrainDetails = () => {
                             <div style={styles.inputGroup}>
                                 <label style={styles.label}>
                                     <Users size={15} color="#38BDF8" />
-                                    <span>Number of Passengers / Seats</span>
+                                    <span>Number of Passengers</span>
                                 </label>
                                 <div style={styles.stepperWrapper}>
                                     <button 
                                         type="button" 
                                         onClick={() => setSeats(Math.max(1, seats - 1))}
                                         style={styles.stepperBtn}
+                                        aria-label="Decrease passenger count"
                                     >-</button>
-                                    <span style={styles.stepperValue}>{seats}</span>
+                                    <span style={styles.stepperValue} className="font-display">{seats}</span>
                                     <button 
                                         type="button" 
                                         onClick={() => setSeats(Math.min(6, seats + 1))}
                                         style={styles.stepperBtn}
+                                        aria-label="Increase passenger count"
                                     >+</button>
                                 </div>
                             </div>
 
-                            {/* Availability Box */}
-                            <div style={styles.availabilityCard}>
-                                <div style={styles.availHeader}>
-                                    <span style={{ fontSize: '0.82rem', color: '#94A3B8', fontWeight: 600 }}>Seat Inventory Status:</span>
-                                    {checkingAvailability ? (
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#38BDF8', fontSize: '0.8rem' }}>
-                                            <Loader2 size={13} className="spin" /> Checking...
-                                        </span>
-                                    ) : availableCount !== null ? (
-                                        <div style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.4rem',
-                                            color: availableCount >= seats ? '#10B981' : '#F43F5E',
-                                            fontWeight: 700,
-                                            fontSize: '0.88rem'
-                                        }}>
-                                            {availableCount >= seats ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-                                            <span>{availableCount} Available</span>
-                                        </div>
-                                    ) : (
-                                        <span style={{ color: '#64748B', fontSize: '0.8rem' }}>Select date to check</span>
-                                    )}
-                                </div>
-                            </div>
 
                             {/* Fare Breakdown */}
                             <div style={styles.fareBreakdownBox}>
                                 <div style={styles.fareRow}>
-                                    <span style={{ color: '#94A3B8', fontSize: '0.85rem' }}>
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                                         Base Fare ({seats} {seats === 1 ? 'seat' : 'seats'} × {estimatedDistance} km @ ₹{farePerKm}/km)
                                     </span>
-                                    <span style={{ color: '#F8FAFC', fontWeight: 600 }}>₹{estimatedFare}</span>
+                                    <span style={{ color: 'var(--text-main)', fontWeight: 700 }} className="font-mono">₹{estimatedFare}</span>
                                 </div>
                                 <div style={styles.fareDivider}></div>
                                 <div style={styles.totalRow}>
-                                    <span style={{ color: '#CBD5E1', fontWeight: 700 }}>Estimated Total</span>
-                                    <span style={styles.totalAmount}>₹{estimatedFare}</span>
+                                    <span style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Estimated Total</span>
+                                    <motion.span 
+                                        key={estimatedFare} // Forces re-animation on value change
+                                        initial={{ scale: 0.8, color: '#10B981' }}
+                                        animate={{ scale: 1, color: 'var(--accent-primary)' }}
+                                        transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                                        style={styles.totalAmount} 
+                                        className="font-mono"
+                                    >
+                                        ₹{estimatedFare}
+                                    </motion.span>
                                 </div>
                             </div>
 
@@ -485,7 +596,7 @@ const TrainDetails = () => {
                             </button>
 
                             <p style={styles.concurrencyNote}>
-                                🔒 Protected by row-level pessimistic locking & idempotency keys.
+                                🔒 Protected by row-level pessimistic locking & Kafka stream idempotency.
                             </p>
                         </div>
                     </div>
@@ -510,8 +621,8 @@ const TrainDetails = () => {
                             {bookingStage === 'initiating' && (
                                 <div style={styles.modalStateBox}>
                                     <Loader2 size={48} color="#38BDF8" className="spin" />
-                                    <h3 style={styles.modalTitle}>Sending Reservation Request...</h3>
-                                    <p style={styles.modalDesc}>Establishing secure connection to API Gateway</p>
+                                    <h3 className="font-display" style={styles.modalTitle}>Initiating Reservation...</h3>
+                                    <p style={styles.modalDesc}>Establishing secure connection with distributed reservation engine</p>
                                 </div>
                             )}
 
@@ -520,7 +631,7 @@ const TrainDetails = () => {
                                     <div style={styles.kafkaAnimation}>
                                         <Train size={36} color="#38BDF8" className="pulse-glow" />
                                     </div>
-                                    <h3 style={styles.modalTitle}>Kafka Event Processing</h3>
+                                    <h3 className="font-display" style={styles.modalTitle}>Kafka Event Processing</h3>
                                     <p style={styles.modalDesc}>
                                         Acquiring row lock on Seat Inventory table and computing fare matrix...
                                     </p>
@@ -535,9 +646,9 @@ const TrainDetails = () => {
                                     <div style={styles.successIconBox}>
                                         <CheckCircle2 size={44} color="#10B981" />
                                     </div>
-                                    <h3 style={styles.modalTitle}>Seats Locked Successfully!</h3>
+                                    <h3 className="font-display" style={styles.modalTitle}>Seats Locked Successfully!</h3>
                                     <p style={styles.modalDesc}>
-                                        PNR: <b>{bookingResult?.pnr}</b> • Redirecting to payment gateway...
+                                        PNR: <b className="font-mono">{bookingResult?.pnr}</b> • Redirecting to payment gateway...
                                     </p>
                                 </div>
                             )}
@@ -545,13 +656,13 @@ const TrainDetails = () => {
                             {bookingStage === 'failed' && (
                                 <div style={styles.modalStateBox}>
                                     <AlertTriangle size={48} color="#F43F5E" />
-                                    <h3 style={{ ...styles.modalTitle, color: '#FDA4AF' }}>Reservation Failed</h3>
+                                    <h3 className="font-display" style={{ ...styles.modalTitle, color: '#FDA4AF' }}>Reservation Failed</h3>
                                     <p style={styles.modalDesc}>{bookingError}</p>
                                     <button 
                                         type="button"
                                         className="btn-secondary"
                                         onClick={() => setIsBooking(false)}
-                                        style={{ marginTop: '1rem' }}
+                                        style={{ marginTop: '1.25rem' }}
                                     >
                                         Close & Try Again
                                     </button>
@@ -572,7 +683,7 @@ const styles = {
         paddingBottom: '5rem',
     },
     main: {
-        maxWidth: '1280px',
+        maxWidth: '1320px',
         margin: '0 auto',
         padding: '2rem 1.5rem',
     },
@@ -582,19 +693,20 @@ const styles = {
     backBtn: {
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        padding: '0.6rem 1rem',
-        background: 'rgba(255, 255, 255, 0.04)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '10px',
-        color: '#CBD5E1',
-        fontWeight: 600,
+        gap: '0.55rem',
+        padding: '0.65rem 1.15rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '12px',
+        color: 'var(--text-secondary)',
+        fontWeight: 700,
         fontSize: '0.88rem',
         cursor: 'pointer',
+        transition: 'all 0.2s ease'
     },
     grid: {
         display: 'grid',
-        gridTemplateColumns: '1fr 420px',
+        gridTemplateColumns: '1fr 430px',
         gap: '2rem',
         alignItems: 'flex-start',
     },
@@ -608,106 +720,117 @@ const styles = {
         top: '6rem',
     },
     trainHeaderCard: {
-        background: 'rgba(17, 27, 49, 0.75)',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '24px',
-        padding: '2rem',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
+        background: 'var(--bg-card)',
+        backdropFilter: 'blur(28px)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '26px',
+        padding: '2.25rem',
+        boxShadow: 'var(--shadow-lg)',
     },
     trainMeta: {
         display: 'flex',
         alignItems: 'center',
-        gap: '1.25rem',
+        gap: '1.35rem',
     },
     trainIconBox: {
-        width: '64px',
-        height: '64px',
-        borderRadius: '16px',
+        width: '68px',
+        height: '68px',
+        borderRadius: '20px',
         background: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 0 25px rgba(56, 189, 248, 0.4)',
+        boxShadow: '0 0 25px rgba(56, 189, 248, 0.45)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
         flexShrink: 0,
     },
     trainTitle: {
         margin: 0,
-        fontSize: '2rem',
+        fontSize: '2.1rem',
         fontWeight: 800,
-        color: '#F8FAFC',
+        color: 'var(--text-main)',
         lineHeight: 1.1,
     },
-    trainSubRow: {
+    badgeRow: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.6rem',
-        marginTop: '0.5rem',
+        gap: '0.5rem',
+        marginBottom: '0.35rem',
     },
     trainCodeBadge: {
-        padding: '0.25rem 0.6rem',
-        borderRadius: '6px',
+        padding: '0.2rem 0.6rem',
+        borderRadius: '8px',
         background: 'rgba(56, 189, 248, 0.15)',
-        color: '#38BDF8',
-        fontSize: '0.85rem',
-        fontWeight: 700,
-    },
-    typeBadge: {
-        padding: '0.25rem 0.6rem',
-        borderRadius: '6px',
-        background: 'rgba(255, 255, 255, 0.06)',
-        color: '#94A3B8',
-        fontSize: '0.85rem',
-        fontWeight: 600,
+        color: 'var(--accent-primary)',
+        fontSize: '0.82rem',
+        fontWeight: 800,
+        border: '1px solid rgba(56, 189, 248, 0.3)'
     },
     sectionCard: {
-        background: 'rgba(17, 27, 49, 0.65)',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '24px',
+        background: 'var(--bg-card)',
+        backdropFilter: 'blur(24px)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '26px',
         padding: '2rem',
+        boxShadow: 'var(--shadow-md)'
+    },
+    stopsHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '1.25rem'
+    },
+    stopsBadge: {
+        fontSize: '0.75rem',
+        fontWeight: 700,
+        color: 'var(--accent-primary)',
+        background: 'rgba(56, 189, 248, 0.1)',
+        padding: '0.25rem 0.65rem',
+        borderRadius: '8px',
+        border: '1px solid rgba(56, 189, 248, 0.25)'
     },
     cardHeading: {
-        fontSize: '1.2rem',
+        fontSize: '1.25rem',
         fontWeight: 800,
-        color: '#F8FAFC',
-        marginBottom: '1.25rem',
+        color: 'var(--text-main)',
+        margin: 0
     },
     stationsRow: {
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
         gap: '1rem',
+        marginTop: '1.25rem'
     },
     inputGroup: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.4rem',
+        gap: '0.45rem',
         marginBottom: '1.25rem',
     },
     label: {
         display: 'flex',
         alignItems: 'center',
         gap: '0.4rem',
-        fontSize: '0.82rem',
+        fontSize: '0.8rem',
         fontWeight: 700,
-        color: '#CBD5E1',
+        color: 'var(--text-secondary)',
         textTransform: 'uppercase',
         letterSpacing: '0.04em',
     },
     select: {
-        padding: '0.85rem 1rem',
-        background: 'rgba(255, 255, 255, 0.04)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '12px',
-        color: '#F8FAFC',
+        padding: '0.85rem 1.1rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '14px',
+        color: 'var(--text-main)',
         fontSize: '0.95rem',
     },
     dateInput: {
-        padding: '0.85rem 1rem',
-        background: 'rgba(255, 255, 255, 0.04)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '12px',
-        color: '#F8FAFC',
+        padding: '0.85rem 1.1rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '14px',
+        color: 'var(--text-main)',
         fontSize: '0.95rem',
     },
     stopsTimeline: {
@@ -717,7 +840,7 @@ const styles = {
     },
     stopTimelineItem: {
         display: 'flex',
-        gap: '1rem',
+        gap: '1.15rem',
         position: 'relative',
     },
     stopMarker: {
@@ -731,19 +854,19 @@ const styles = {
         height: '12px',
         borderRadius: '50%',
         background: '#38BDF8',
-        boxShadow: '0 0 8px #38BDF8',
+        boxShadow: '0 0 10px #38BDF8',
         zIndex: 2,
     },
     stopLine: {
         width: '2px',
         flex: 1,
-        background: 'rgba(255, 255, 255, 0.1)',
+        background: 'var(--glass-border)',
         margin: '4px 0',
-        minHeight: '40px',
+        minHeight: '42px',
     },
     stopInfo: {
         flex: 1,
-        paddingBottom: '1.25rem',
+        paddingBottom: '1.35rem',
     },
     stopNameRow: {
         display: 'flex',
@@ -752,28 +875,28 @@ const styles = {
     },
     stopStation: {
         fontWeight: 700,
-        color: '#F8FAFC',
+        color: 'var(--text-main)',
         fontSize: '0.95rem',
     },
     stopDistance: {
         fontSize: '0.82rem',
         color: '#10B981',
-        fontWeight: 600,
+        fontWeight: 700,
     },
     stopTiming: {
         display: 'flex',
         gap: '0.5rem',
-        color: '#94A3B8',
+        color: 'var(--text-muted)',
         fontSize: '0.82rem',
-        marginTop: '0.2rem',
+        marginTop: '0.25rem',
     },
     bookingCard: {
-        background: 'rgba(17, 27, 49, 0.85)',
-        backdropFilter: 'blur(25px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '24px',
+        background: 'var(--bg-card)',
+        backdropFilter: 'blur(28px)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '26px',
         padding: '2rem',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.1)',
+        boxShadow: 'var(--shadow-xl), var(--glass-glow)',
     },
     bookingCardHeader: {
         display: 'flex',
@@ -783,14 +906,38 @@ const styles = {
     },
     bookingTitle: {
         margin: 0,
-        fontSize: '1.35rem',
+        fontSize: '1.4rem',
         fontWeight: 800,
-        color: '#F8FAFC',
+        color: 'var(--text-main)',
+    },
+    calendarStrip: {
+        display: 'flex',
+        gap: '0.5rem',
+        overflowX: 'auto',
+        paddingBottom: '0.25rem',
+        marginTop: '0.5rem',
+        scrollbarWidth: 'none', // Hide scrollbar Firefox
+        width: '100%',
+        WebkitMaskImage: 'linear-gradient(to right, black 85%, transparent 100%)',
+        maskImage: 'linear-gradient(to right, black 85%, transparent 100%)',
+    },
+    calendarDayCard: {
+        flex: '0 0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '0.65rem 0.5rem',
+        border: '1px solid',
+        borderRadius: '12px',
+        cursor: 'pointer',
+        minWidth: '58px',
+        transition: 'all 0.2s ease',
     },
     bookingSubtitle: {
-        margin: '0.2rem 0 0 0',
+        margin: '0.25rem 0 0 0',
         fontSize: '0.82rem',
-        color: '#94A3B8',
+        color: 'var(--text-muted)',
     },
     classSelectorGrid: {
         display: 'grid',
@@ -801,48 +948,52 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '0.35rem',
+        gap: '0.4rem',
         padding: '0.85rem 0.5rem',
         border: '1px solid',
-        borderRadius: '12px',
+        borderRadius: '14px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
     },
     classFareText: {
         fontSize: '0.78rem',
-        fontWeight: 700,
-        color: '#CBD5E1',
+        fontWeight: 800,
+        color: 'var(--text-secondary)',
     },
     stepperWrapper: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: 'rgba(255, 255, 255, 0.04)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '12px',
-        padding: '0.35rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '14px',
+        padding: '0.4rem',
     },
     stepperBtn: {
-        width: '38px',
-        height: '38px',
-        borderRadius: '8px',
+        width: '40px',
+        height: '40px',
+        borderRadius: '10px',
         background: 'rgba(255, 255, 255, 0.08)',
         border: 'none',
-        color: '#F8FAFC',
-        fontSize: '1.25rem',
+        color: 'var(--text-main)',
+        fontSize: '1.35rem',
         fontWeight: 700,
         cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'all 0.2s ease'
     },
     stepperValue: {
-        fontSize: '1.2rem',
+        fontSize: '1.3rem',
         fontWeight: 800,
-        color: '#F8FAFC',
+        color: 'var(--text-main)',
     },
     availabilityCard: {
-        background: 'rgba(0, 0, 0, 0.3)',
-        borderRadius: '12px',
-        padding: '0.85rem 1rem',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
+        background: 'var(--glass-bg-subtle)',
+        borderRadius: '14px',
+        padding: '0.9rem 1.1rem',
+        border: '1px solid var(--glass-border)',
         marginBottom: '1.25rem',
     },
     availHeader: {
@@ -852,9 +1003,9 @@ const styles = {
     },
     fareBreakdownBox: {
         background: 'rgba(56, 189, 248, 0.06)',
-        border: '1px solid rgba(56, 189, 248, 0.2)',
-        borderRadius: '14px',
-        padding: '1.15rem',
+        border: '1px solid rgba(56, 189, 248, 0.22)',
+        borderRadius: '16px',
+        padding: '1.25rem',
         marginBottom: '1.5rem',
     },
     fareRow: {
@@ -865,7 +1016,7 @@ const styles = {
     fareDivider: {
         height: '1px',
         background: 'rgba(56, 189, 248, 0.15)',
-        margin: '0.75rem 0',
+        margin: '0.85rem 0',
     },
     totalRow: {
         display: 'flex',
@@ -873,19 +1024,19 @@ const styles = {
         alignItems: 'center',
     },
     totalAmount: {
-        fontSize: '1.5rem',
-        fontWeight: 800,
-        color: '#38BDF8',
+        fontSize: '1.6rem',
+        fontWeight: 900,
+        color: 'var(--accent-primary)',
     },
     bookSubmitBtn: {
         width: '100%',
         padding: '1rem',
-        borderRadius: '12px',
-        fontSize: '1rem',
+        borderRadius: '14px',
+        fontSize: '0.98rem',
     },
     concurrencyNote: {
         textAlign: 'center',
-        color: '#64748B',
+        color: 'var(--text-dim)',
         fontSize: '0.75rem',
         marginTop: '1rem',
         marginBottom: 0,
@@ -897,7 +1048,8 @@ const styles = {
         width: '100vw',
         height: '100vh',
         background: 'rgba(0, 0, 0, 0.8)',
-        backdropFilter: 'blur(10px)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         zIndex: 999,
         display: 'flex',
         alignItems: 'center',
@@ -905,13 +1057,13 @@ const styles = {
         padding: '1rem',
     },
     modalBox: {
-        background: '#0D1424',
-        border: '1px solid rgba(56, 189, 248, 0.3)',
-        borderRadius: '24px',
+        background: 'var(--bg-card-elevated, #0D1424)',
+        border: '1px solid rgba(56, 189, 248, 0.35)',
+        borderRadius: '26px',
         padding: '3rem 2.5rem',
         width: '100%',
         maxWidth: '480px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 40px rgba(56, 189, 248, 0.2)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 45px rgba(56, 189, 248, 0.25)',
         textAlign: 'center',
     },
     modalStateBox: {
@@ -920,20 +1072,20 @@ const styles = {
         alignItems: 'center',
     },
     modalTitle: {
-        fontSize: '1.5rem',
+        fontSize: '1.6rem',
         fontWeight: 800,
-        color: '#F8FAFC',
+        color: 'var(--text-main)',
         marginTop: '1.25rem',
         marginBottom: '0.5rem',
     },
     modalDesc: {
-        color: '#94A3B8',
+        color: 'var(--text-muted)',
         fontSize: '0.92rem',
         lineHeight: 1.5,
     },
     kafkaAnimation: {
-        width: '72px',
-        height: '72px',
+        width: '76px',
+        height: '76px',
         borderRadius: '50%',
         background: 'rgba(56, 189, 248, 0.15)',
         display: 'flex',
@@ -942,7 +1094,7 @@ const styles = {
     },
     loadingBar: {
         width: '100%',
-        height: '4px',
+        height: '5px',
         background: 'rgba(255, 255, 255, 0.1)',
         borderRadius: '4px',
         overflow: 'hidden',
@@ -952,11 +1104,11 @@ const styles = {
         width: '100%',
         height: '100%',
         background: 'linear-gradient(90deg, #38BDF8, #10B981)',
-        animation: 'shimmer 1.5s infinite',
+        animation: 'shimmerGlow 1.5s infinite',
     },
     successIconBox: {
-        width: '64px',
-        height: '64px',
+        width: '68px',
+        height: '68px',
         borderRadius: '50%',
         background: 'rgba(16, 185, 129, 0.15)',
         display: 'flex',
@@ -973,3 +1125,4 @@ const styles = {
 };
 
 export default TrainDetails;
+

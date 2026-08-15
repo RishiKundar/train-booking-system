@@ -5,6 +5,7 @@ import com.trainbooking.userservice.auth.dto.SignupRequest;
 import com.trainbooking.userservice.auth.dto.TokenResponse;
 import com.trainbooking.userservice.auth.service.AuthService;
 import com.trainbooking.userservice.auth.service.TokenService;
+import com.trainbooking.userservice.common.exception.AuthException;
 import com.trainbooking.userservice.role.entity.Role;
 import com.trainbooking.userservice.role.repo.RoleRepository;
 import com.trainbooking.userservice.user.entity.User;

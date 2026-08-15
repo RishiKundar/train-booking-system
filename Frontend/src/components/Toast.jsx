@@ -10,11 +10,31 @@ const toastIcons = {
     info: <Info size={18} color="#38BDF8" />
 };
 
-const toastColors = {
-    success: { border: 'rgba(16, 185, 129, 0.3)', bg: 'rgba(16, 185, 129, 0.12)' },
-    error: { border: 'rgba(244, 63, 94, 0.3)', bg: 'rgba(244, 63, 94, 0.12)' },
-    warning: { border: 'rgba(245, 158, 11, 0.3)', bg: 'rgba(245, 158, 11, 0.12)' },
-    info: { border: 'rgba(56, 189, 248, 0.3)', bg: 'rgba(56, 189, 248, 0.12)' }
+const toastThemes = {
+    success: { 
+        border: 'rgba(16, 185, 129, 0.35)', 
+        bg: 'rgba(16, 185, 129, 0.12)',
+        glow: 'rgba(16, 185, 129, 0.25)',
+        accent: '#10B981'
+    },
+    error: { 
+        border: 'rgba(244, 63, 94, 0.35)', 
+        bg: 'rgba(244, 63, 94, 0.12)',
+        glow: 'rgba(244, 63, 94, 0.25)',
+        accent: '#F43F5E'
+    },
+    warning: { 
+        border: 'rgba(245, 158, 11, 0.35)', 
+        bg: 'rgba(245, 158, 11, 0.12)',
+        glow: 'rgba(245, 158, 11, 0.25)',
+        accent: '#F59E0B'
+    },
+    info: { 
+        border: 'rgba(56, 189, 248, 0.35)', 
+        bg: 'rgba(56, 189, 248, 0.12)',
+        glow: 'rgba(56, 189, 248, 0.25)',
+        accent: '#38BDF8'
+    }
 };
 
 export const ToastContainer = () => {
@@ -24,20 +44,21 @@ export const ToastContainer = () => {
         <div style={styles.container}>
             <AnimatePresence>
                 {toasts.map(toast => {
-                    const theme = toastColors[toast.type] || toastColors.info;
+                    const theme = toastThemes[toast.type] || toastThemes.info;
                     return (
                         <motion.div
                             key={toast.id}
-                            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                            initial={{ opacity: 0, y: -20, scale: 0.92, x: 20 }}
+                            animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+                            exit={{ opacity: 0, scale: 0.88, x: 30, transition: { duration: 0.2 } }}
+                            transition={{ type: "spring", stiffness: 400, damping: 28 }}
                             style={{
                                 ...styles.toast,
                                 borderColor: theme.border,
-                                background: `linear-gradient(135deg, ${theme.bg} 0%, rgba(15, 23, 42, 0.95) 100%)`
+                                boxShadow: `0 15px 35px -5px rgba(0, 0, 0, 0.45), 0 0 20px ${theme.glow}`
                             }}
                         >
-                            <div style={styles.iconBox}>
+                            <div style={{ ...styles.iconBox, background: theme.bg, border: `1px solid ${theme.border}` }}>
                                 {toastIcons[toast.type] || toastIcons.info}
                             </div>
                             <p style={styles.message}>{toast.message}</p>
@@ -46,7 +67,7 @@ export const ToastContainer = () => {
                                 style={styles.closeBtn}
                                 aria-label="Close notification"
                             >
-                                <X size={16} />
+                                <X size={15} />
                             </button>
                         </motion.div>
                     );
@@ -59,14 +80,14 @@ export const ToastContainer = () => {
 const styles = {
     container: {
         position: 'fixed',
-        top: '1.5rem',
-        right: '1.5rem',
+        top: '1.25rem',
+        right: '1.25rem',
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
         gap: '0.75rem',
         maxWidth: '420px',
-        width: 'calc(100% - 3rem)',
+        width: 'calc(100% - 2.5rem)',
         pointerEvents: 'none'
     },
     toast: {
@@ -74,15 +95,18 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         gap: '0.85rem',
-        padding: '0.9rem 1.15rem',
-        borderRadius: '14px',
+        padding: '0.85rem 1.15rem',
+        borderRadius: '16px',
         border: '1px solid',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',
-        color: '#F8FAFC'
+        background: 'var(--bg-card-elevated, rgba(15, 23, 42, 0.95))',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        color: 'var(--text-main, #F8FAFC)'
     },
     iconBox: {
+        width: '32px',
+        height: '32px',
+        borderRadius: '10px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -90,22 +114,23 @@ const styles = {
     },
     message: {
         margin: 0,
-        fontSize: '0.9rem',
-        fontWeight: 500,
+        fontSize: '0.88rem',
+        fontWeight: 600,
         lineHeight: 1.4,
         flex: 1
     },
     closeBtn: {
         background: 'transparent',
         border: 'none',
-        color: '#94A3B8',
+        color: 'var(--text-muted, #94A3B8)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '4px',
-        borderRadius: '6px',
+        padding: '6px',
+        borderRadius: '8px',
         cursor: 'pointer',
-        transition: 'color 0.2s, background-color 0.2s',
+        transition: 'all 0.2s ease',
         flexShrink: 0
     }
 };
+

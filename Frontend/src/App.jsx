@@ -6,6 +6,7 @@ import { Navbar } from './components/Navbar';
 import { ToastContainer } from './components/Toast';
 
 // Pages
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
@@ -48,21 +49,20 @@ function App() {
                 <ToastContainer />
                 <Navbar />
                 <Routes>
+                    {/* Public Landing & Discovery */}
+                    <Route path="/" element={<Landing />} />
+
                     {/* Public Auth Routes */}
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
                     
                     {/* Passenger Protected Routes */}
-                    <Route path="/" element={
+                    <Route path="/dashboard" element={
                         <ProtectedRoute>
                             <Dashboard />
                         </ProtectedRoute>
                     }/>
-                    <Route path="/search" element={
-                        <ProtectedRoute>
-                            <Search />
-                        </ProtectedRoute>
-                    }/>
+                    <Route path="/search" element={<Search />} />
                     <Route path="/booking/:trainId" element={
                         <ProtectedRoute>
                             <TrainDetails />

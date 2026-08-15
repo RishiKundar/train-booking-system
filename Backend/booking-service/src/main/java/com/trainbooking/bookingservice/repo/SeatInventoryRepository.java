@@ -29,4 +29,6 @@ public interface SeatInventoryRepository extends JpaRepository<SeatInventory, Lo
             @Param("travelDate") LocalDate travelDate,
             @Param("seatClass") String seatClass
             );
+
+    boolean existsByTrainIdAndTravelDateAndSeatClass(Long trainId, LocalDate travelDate, String seatClass);
 }

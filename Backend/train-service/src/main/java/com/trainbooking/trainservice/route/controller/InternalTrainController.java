@@ -2,6 +2,7 @@ package com.trainbooking.trainservice.route.controller;
 
 
 import com.trainbooking.trainservice.route.dto.FareInfoResponse;
+import com.trainbooking.trainservice.route.dto.TrainEnrichmentResponse;
 import com.trainbooking.trainservice.route.repo.TrainRouteRepository;
 import com.trainbooking.trainservice.route.service.InternalTrainService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,6 +38,17 @@ public class InternalTrainController {
         Long destinationId = Long.valueOf(destinationStationIdStr);
 
         return ResponseEntity.ok(internalTrainService.getFairInfo(trainId,sourceId,destinationId,seatClassStr));
+    }
+
+
+    @GetMapping("/booking-enrichment")
+    @Operation(summary = "Get Enrichment Info For the Booking")
+    public ResponseEntity<TrainEnrichmentResponse> getEncrichmentData(
+            @RequestParam("trainId") Long trainId,
+            @RequestParam("sourceId") Long sourceId,
+            @RequestParam("destId") Long destId
+    ){
+        return ResponseEntity.ok(internalTrainService.getEnrichmentData(trainId,sourceId,destId));
     }
 
 

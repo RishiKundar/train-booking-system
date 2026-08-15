@@ -16,9 +16,14 @@ export const AuthProvider = ({ children }) => {
             const parts = token.split('.');
             if (parts.length !== 3) return null;
 
-            const payloadBase64 = parts[1];
-            // Fix base64url padding if needed
-            const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+            // Fix base64url padding
+            let base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+            const pad = base64.length % 4;
+            if (pad) {
+                if (pad === 1) throw new Error('InvalidLengthError');
+                base64 += new Array(5 - pad).join('=');
+            }
+
             const jsonPayload = decodeURIComponent(
                 atob(base64)
                     .split('')
@@ -85,7 +90,7 @@ export const AuthProvider = ({ children }) => {
     const fetchUserProfile = async (userId) => {
         if (!userId) return;
         try {
-            const profile = await api.get(`/api/users/internal/${userId}`);
+            const profile = await api.get(`/api/users/${userId}`);
             if (profile) {
                 const fName = profile.firstName || '';
                 const lName = profile.lastName || '';

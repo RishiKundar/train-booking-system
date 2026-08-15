@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Train, User, Mail, Lock, Phone, Eye, EyeOff, UserCheck, AlertTriangle } from 'lucide-react';
+import { Train, User, Mail, Lock, Phone, Eye, EyeOff, UserCheck, AlertTriangle, Sparkles } from 'lucide-react';
 import { api } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 
@@ -83,18 +83,26 @@ const Signup = () => {
     return (
         <div style={styles.container}>
             <motion.div 
-                initial={{ opacity: 0, y: 30, scale: 0.98 }}
+                initial={{ opacity: 0, y: 30, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                 style={styles.card}
             >
                 {/* Header */}
                 <div style={styles.header}>
-                    <div style={styles.iconCircle}>
-                        <Train size={36} color="#070B12" />
+                    <motion.div 
+                        whileHover={{ scale: 1.12, rotate: 6 }}
+                        whileTap={{ scale: 0.95 }}
+                        style={styles.iconCircle}
+                    >
+                        <Train size={34} color="#FFFFFF" />
+                    </motion.div>
+                    <div style={styles.badgePill}>
+                        <Sparkles size={13} color="#38BDF8" />
+                        <span>Instant Passenger Onboarding</span>
                     </div>
-                    <h1 style={styles.title}>Create Passenger Account</h1>
-                    <p style={styles.subtitle}>Register to reserve seats with instant confirmation & tracking</p>
+                    <h1 className="font-display" style={styles.title}>Create Passenger Account</h1>
+                    <p style={styles.subtitle}>Register to reserve seats with instant lock & real-time confirmation</p>
                 </div>
 
                 {error && (
@@ -137,7 +145,7 @@ const Signup = () => {
                     <div style={styles.inputField}>
                         <label style={styles.label}>Username *</label>
                         <div style={styles.inputWrapper}>
-                            <User size={18} color="#64748B" style={styles.leadingIcon} />
+                            <User size={18} color="var(--text-dim)" style={styles.leadingIcon} />
                             <input 
                                 type="text" 
                                 name="username" 
@@ -153,7 +161,7 @@ const Signup = () => {
                     <div style={styles.inputField}>
                         <label style={styles.label}>Email Address *</label>
                         <div style={styles.inputWrapper}>
-                            <Mail size={18} color="#64748B" style={styles.leadingIcon} />
+                            <Mail size={18} color="var(--text-dim)" style={styles.leadingIcon} />
                             <input 
                                 type="email" 
                                 name="email" 
@@ -169,7 +177,7 @@ const Signup = () => {
                     <div style={styles.inputField}>
                         <label style={styles.label}>Mobile Number * (10 Digits)</label>
                         <div style={styles.inputWrapper}>
-                            <Phone size={18} color="#64748B" style={styles.leadingIcon} />
+                            <Phone size={18} color="var(--text-dim)" style={styles.leadingIcon} />
                             <input 
                                 type="tel" 
                                 name="mobileNo" 
@@ -186,7 +194,7 @@ const Signup = () => {
                     <div style={styles.inputField}>
                         <label style={styles.label}>Password * (Min 8 characters)</label>
                         <div style={styles.inputWrapper}>
-                            <Lock size={18} color="#64748B" style={styles.leadingIcon} />
+                            <Lock size={18} color="var(--text-dim)" style={styles.leadingIcon} />
                             <input 
                                 type={showPassword ? "text" : "password"} 
                                 name="password" 
@@ -202,8 +210,9 @@ const Signup = () => {
                                 onClick={() => setShowPassword(!showPassword)}
                                 style={styles.trailingIconBtn}
                                 title={showPassword ? "Hide password" : "Show password"}
+                                aria-label="Toggle password visibility"
                             >
-                                {showPassword ? <EyeOff size={18} color="#94A3B8" /> : <Eye size={18} color="#94A3B8" />}
+                                {showPassword ? <EyeOff size={18} color="var(--text-muted)" /> : <Eye size={18} color="var(--text-muted)" />}
                             </button>
                         </div>
                     </div>
@@ -229,7 +238,7 @@ const Signup = () => {
                 </form>
 
                 <div style={styles.footer}>
-                    <p style={{ margin: 0 }}>
+                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>
                         Already have an account? <Link to="/login" style={styles.link}>Sign In</Link>
                     </p>
                 </div>
@@ -243,20 +252,20 @@ const styles = {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        minHeight: '100vh',
+        minHeight: 'calc(100vh - 80px)',
         width: '100%',
         padding: '2.5rem 1rem',
     },
     card: {
-        background: 'rgba(17, 27, 49, 0.75)',
-        backdropFilter: 'blur(25px)',
-        WebkitBackdropFilter: 'blur(25px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '24px',
-        padding: '2.5rem 2.5rem',
+        background: 'var(--bg-card)',
+        backdropFilter: 'blur(28px)',
+        WebkitBackdropFilter: 'blur(28px)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '26px',
+        padding: '2.75rem 2.5rem',
         width: '100%',
-        maxWidth: '480px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.1)',
+        maxWidth: '500px',
+        boxShadow: 'var(--shadow-xl), var(--glass-glow)',
     },
     header: {
         display: 'flex',
@@ -266,26 +275,41 @@ const styles = {
         textAlign: 'center',
     },
     iconCircle: {
-        width: '56px',
-        height: '56px',
-        borderRadius: '14px',
+        width: '64px',
+        height: '64px',
+        borderRadius: '18px',
         background: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         boxShadow: '0 0 25px rgba(56, 189, 248, 0.4)',
-        marginBottom: '1rem',
+        marginBottom: '0.85rem',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+    },
+    badgePill: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.4rem',
+        padding: '0.25rem 0.75rem',
+        borderRadius: '9999px',
+        background: 'rgba(56, 189, 248, 0.1)',
+        border: '1px solid rgba(56, 189, 248, 0.25)',
+        color: 'var(--accent-primary)',
+        fontSize: '0.75rem',
+        fontWeight: 700,
+        marginBottom: '0.75rem',
+        letterSpacing: '0.03em'
     },
     title: {
         margin: 0,
-        fontSize: '1.6rem',
+        fontSize: '1.75rem',
         fontWeight: 800,
-        color: '#F8FAFC',
+        color: 'var(--text-main)',
         letterSpacing: '-0.02em',
     },
     subtitle: {
         marginTop: '0.35rem',
-        color: '#94A3B8',
+        color: 'var(--text-muted)',
         fontSize: '0.88rem',
         lineHeight: 1.4,
     },
@@ -294,17 +318,18 @@ const styles = {
         alignItems: 'center',
         gap: '0.75rem',
         background: 'rgba(244, 63, 94, 0.12)',
-        border: '1px solid rgba(244, 63, 94, 0.3)',
+        border: '1px solid rgba(244, 63, 94, 0.35)',
         color: '#FDA4AF',
         padding: '0.85rem 1rem',
-        borderRadius: '12px',
+        borderRadius: '14px',
         marginBottom: '1.25rem',
         fontSize: '0.88rem',
+        fontWeight: 600,
     },
     form: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '1.1rem',
+        gap: '1.15rem',
     },
     row: {
         display: 'grid',
@@ -314,20 +339,20 @@ const styles = {
     inputField: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.35rem',
+        gap: '0.4rem',
     },
     label: {
         fontSize: '0.82rem',
-        fontWeight: 600,
-        color: '#CBD5E1',
+        fontWeight: 700,
+        color: 'var(--text-secondary)',
     },
     input: {
         width: '100%',
-        padding: '0.8rem 1rem',
-        background: 'rgba(255, 255, 255, 0.04)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '12px',
-        color: '#F8FAFC',
+        padding: '0.82rem 1.1rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '14px',
+        color: 'var(--text-main)',
         fontSize: '0.92rem',
     },
     inputWrapper: {
@@ -337,16 +362,16 @@ const styles = {
     },
     leadingIcon: {
         position: 'absolute',
-        left: '1rem',
+        left: '1.1rem',
         pointerEvents: 'none',
     },
     inputWithIcon: {
         width: '100%',
-        padding: '0.8rem 2.8rem 0.8rem 2.6rem',
-        background: 'rgba(255, 255, 255, 0.04)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '12px',
-        color: '#F8FAFC',
+        padding: '0.82rem 2.8rem 0.82rem 2.8rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '14px',
+        color: 'var(--text-main)',
         fontSize: '0.92rem',
     },
     trailingIconBtn: {
@@ -357,14 +382,14 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 0,
+        padding: '4px',
         cursor: 'pointer',
     },
     submitBtn: {
         width: '100%',
         marginTop: '0.5rem',
         padding: '0.95rem',
-        borderRadius: '12px',
+        borderRadius: '14px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -373,14 +398,14 @@ const styles = {
     footer: {
         marginTop: '1.5rem',
         textAlign: 'center',
-        color: '#94A3B8',
         fontSize: '0.9rem',
     },
     link: {
-        color: '#38BDF8',
+        color: 'var(--accent-primary)',
         textDecoration: 'none',
         fontWeight: 700,
     }
 };
 
 export default Signup;
+

@@ -3,12 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Train, Search as SearchIcon, ArrowRight, ArrowLeftRight, 
-    Calendar, MapPin, Clock, ArrowRightLeft, Sparkles, Filter, 
-    ChevronDown, ChevronUp, Navigation, AlertCircle 
+    Calendar, MapPin, Clock, Sparkles, Filter, 
+    ChevronDown, ChevronUp, Navigation, AlertCircle, Compass, Zap
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
-import { SeatClassBadge } from '../components/Badge';
+import { SeatClassBadge, TrainTypeBadge } from '../components/Badge';
 
 const Search = () => {
     const [searchParams] = useSearchParams();
@@ -19,10 +19,16 @@ const Search = () => {
     const [stations, setStations] = useState([]);
     const [loadingStations, setLoadingStations] = useState(true);
 
+    // URL Parameters
+    const initialSource = searchParams.get('sourceStationId');
+    const initialDest = searchParams.get('destinationStationId');
+    const initialDate = searchParams.get('travelDate') || searchParams.get('date');
+
     // Form inputs
-    const [sourceStationId, setSourceStationId] = useState('');
-    const [destinationStationId, setDestinationStationId] = useState('');
+    const [sourceStationId, setSourceStationId] = useState(initialSource || '');
+    const [destinationStationId, setDestinationStationId] = useState(initialDest || '');
     const [travelDate, setTravelDate] = useState(() => {
+        if (initialDate) return initialDate;
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         return tomorrow.toISOString().split('T')[0];
@@ -51,8 +57,8 @@ const Search = () => {
                 setStations(list);
 
                 if (list.length >= 2) {
-                    setSourceStationId(list[0].id.toString());
-                    setDestinationStationId(list[1].id.toString());
+                    if (!initialSource) setSourceStationId(list[0].id.toString());
+                    if (!initialDest) setDestinationStationId(list[1].id.toString());
                 }
             } catch (err) {
                 console.error("Failed to load stations", err);
@@ -73,7 +79,14 @@ const Search = () => {
 
         fetchStationsAndDefaults();
         fetchAllTrains();
-    }, [showToast]);
+    }, [showToast, initialSource, initialDest]);
+
+    // Auto-execute search if navigated from Landing with parameters
+    useEffect(() => {
+        if (initialSource && initialDest && stations.length > 0 && !hasSearched) {
+            handleSearch();
+        }
+    }, [initialSource, initialDest, stations.length, hasSearched]);
 
     // Handle station-to-station search
     const handleSearch = async (e) => {
@@ -124,6 +137,13 @@ const Search = () => {
         setDestinationStationId(sourceStationId);
     };
 
+    // Quick Date Picker helpers
+    const setQuickDate = (daysAhead) => {
+        const d = new Date();
+        d.setDate(d.getDate() + daysAhead);
+        setTravelDate(d.toISOString().split('T')[0]);
+    };
+
     // Toggle train route stop details
     const toggleTrainRoute = async (trainId) => {
         if (expandedTrainId === trainId) {
@@ -169,20 +189,22 @@ const Search = () => {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
                         style={styles.heroHeader}
                     >
                         <div style={styles.badge}>
                             <Sparkles size={14} color="#38BDF8" />
-                            <span>Real-Time Seat Inventory & Fare Engine</span>
+                            <span>Real-Time Seat Inventory & Distributed Reservation</span>
                         </div>
-                        <h1 style={styles.heroTitle}>Book Express Train Tickets</h1>
-                        <p style={styles.heroSubtitle}>Search direct routes, inspect live seat availability, and reserve with zero race-conditions.</p>
+                        <h1 className="font-display" style={styles.heroTitle}>Book Express Train Tickets</h1>
+                        <p style={styles.heroSubtitle}>Search high-speed direct routes, inspect live seat availability, and lock bookings instantly.</p>
                     </motion.div>
 
                     {/* Search Form Card */}
                     <motion.div 
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                        initial={{ opacity: 0, scale: 0.98, y: 15 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.1 }}
                         style={styles.searchCard}
                     >
                         <form onSubmit={handleSearch} style={styles.searchForm}>
@@ -190,7 +212,7 @@ const Search = () => {
                             <div style={styles.formCol}>
                                 <label style={styles.label}>
                                     <MapPin size={15} color="#38BDF8" />
-                                    <span>From Station</span>
+                                    <span>Origin Station</span>
                                 </label>
                                 <select 
                                     value={sourceStationId}
@@ -198,10 +220,10 @@ const Search = () => {
                                     style={styles.select}
                                     disabled={loadingStations}
                                 >
-                                    <option value="" disabled>Select Source</option>
+                                    <option value="" disabled>Select Origin</option>
                                     {stations.map(st => (
                                         <option key={`src-${st.id}`} value={st.id}>
-                                            {st.name} ({st.code}) - {st.city}
+                                            {st.name} ({st.code}) — {st.city}
                                         </option>
                                     ))}
                                 </select>
@@ -210,11 +232,12 @@ const Search = () => {
                             {/* Swap Button */}
                             <motion.button 
                                 type="button"
-                                whileHover={{ rotate: 180, scale: 1.15 }}
+                                whileHover={{ rotate: 180, scale: 1.12 }}
                                 whileTap={{ scale: 0.9 }}
                                 onClick={handleSwapStations}
                                 style={styles.swapBtn}
-                                title="Swap Stations"
+                                title="Swap Origin and Destination"
+                                aria-label="Swap Stations"
                             >
                                 <ArrowLeftRight size={18} color="#38BDF8" />
                             </motion.button>
@@ -223,7 +246,7 @@ const Search = () => {
                             <div style={styles.formCol}>
                                 <label style={styles.label}>
                                     <MapPin size={15} color="#10B981" />
-                                    <span>To Station</span>
+                                    <span>Destination Station</span>
                                 </label>
                                 <select 
                                     value={destinationStationId}
@@ -234,7 +257,7 @@ const Search = () => {
                                     <option value="" disabled>Select Destination</option>
                                     {stations.map(st => (
                                         <option key={`dest-${st.id}`} value={st.id}>
-                                            {st.name} ({st.code}) - {st.city}
+                                            {st.name} ({st.code}) — {st.city}
                                         </option>
                                     ))}
                                 </select>
@@ -244,10 +267,10 @@ const Search = () => {
                             <div style={styles.formColDate}>
                                 <label style={styles.label}>
                                     <Calendar size={15} color="#F59E0B" />
-                                    <span>Journey Date</span>
+                                    <span>Travel Date</span>
                                 </label>
                                 <input 
-                                    type="date"
+                                    type="date" 
                                     value={travelDate}
                                     min={new Date().toISOString().split('T')[0]}
                                     onChange={(e) => setTravelDate(e.target.value)}
@@ -258,7 +281,7 @@ const Search = () => {
 
                             {/* Submit */}
                             <button 
-                                type="submit"
+                                type="submit" 
                                 className="btn-primary"
                                 style={styles.searchSubmitBtn}
                                 disabled={loadingResults}
@@ -276,6 +299,15 @@ const Search = () => {
                                 )}
                             </button>
                         </form>
+
+                        {/* Quick Date Shortcuts */}
+                        <div style={styles.quickDatesRow}>
+                            <span style={styles.quickDatesLabel}>Quick Departure:</span>
+                            <button type="button" onClick={() => setQuickDate(0)} style={styles.quickDateChip}>Today</button>
+                            <button type="button" onClick={() => setQuickDate(1)} style={styles.quickDateChip}>Tomorrow</button>
+                            <button type="button" onClick={() => setQuickDate(2)} style={styles.quickDateChip}>In 2 Days</button>
+                            <button type="button" onClick={() => setQuickDate(7)} style={styles.quickDateChip}>Next Week</button>
+                        </div>
                     </motion.div>
                 </div>
 
@@ -290,7 +322,8 @@ const Search = () => {
                                 ...(viewMode === 'search' ? styles.tabBtnActive : {})
                             }}
                         >
-                            <span>Route Results {hasSearched ? `(${searchResults.length})` : ''}</span>
+                            <Compass size={16} />
+                            <span>Route Search {hasSearched ? `(${searchResults.length})` : ''}</span>
                         </button>
                         <button
                             type="button"
@@ -300,13 +333,14 @@ const Search = () => {
                                 ...(viewMode === 'catalog' ? styles.tabBtnActive : {})
                             }}
                         >
-                            <span>Browse All Trains ({allTrains.length})</span>
+                            <Train size={16} />
+                            <span>All Express Trains ({allTrains.length})</span>
                         </button>
                     </div>
 
                     {viewMode === 'catalog' && (
                         <div style={styles.filterBox}>
-                            <SearchIcon size={16} color="#64748B" />
+                            <SearchIcon size={16} color="var(--text-dim)" />
                             <input 
                                 type="text"
                                 placeholder="Filter by train name or code..."
@@ -323,20 +357,21 @@ const Search = () => {
                     <div style={styles.resultsWrapper}>
                         {loadingResults ? (
                             <div style={styles.loadingBox}>
-                                <div className="spin" style={{ fontSize: '2.5rem' }}>🚆</div>
-                                <h3 style={{ marginTop: '1rem', color: '#F8FAFC' }}>Scanning Routes & Schedules...</h3>
-                                <p style={{ color: '#94A3B8', fontSize: '0.9rem' }}>Querying inter-station distance matrices</p>
+                                <div className="spin" style={{ fontSize: '3rem' }}>🚆</div>
+                                <h3 className="font-display" style={{ marginTop: '1.25rem', color: 'var(--text-main)' }}>Scanning Live Schedules & Seat Matrices...</h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Querying inter-station distance matrices across direct corridors</p>
                             </div>
                         ) : searchResults.length > 0 ? (
                             <div style={styles.resultsGrid}>
                                 {searchResults.map((train, idx) => (
                                     <motion.div
                                         key={`search-res-${train.trainId || idx}`}
-                                        initial={{ opacity: 0, y: 20 }}
+                                        initial={{ opacity: 0, y: 25 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: idx * 0.05 }}
+                                        transition={{ delay: idx * 0.05, duration: 0.4 }}
                                         style={styles.trainCard}
                                     >
+                                        {/* Card Header */}
                                         <div style={styles.trainCardHeader}>
                                             <div style={styles.trainIdentity}>
                                                 <div style={styles.trainIconBox}>
@@ -344,42 +379,52 @@ const Search = () => {
                                                 </div>
                                                 <div>
                                                     <h3 style={styles.trainName}>{train.trainName}</h3>
-                                                    <span style={styles.trainCode}>{train.trainCode} • {train.trainType}</span>
+                                                    <div style={styles.badgeRow}>
+                                                        <span style={styles.trainCode} className="font-mono">{train.trainCode}</span>
+                                                        <TrainTypeBadge type={train.trainType} />
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div style={styles.distanceBadge}>
                                                 <Navigation size={13} color="#10B981" />
-                                                <span>{train.distanceKm || 0} km</span>
+                                                <span className="font-mono">{train.distanceKm || 0} km</span>
                                             </div>
                                         </div>
 
-                                        {/* Route Timeline */}
+                                        {/* Route Visualizer Timeline */}
                                         <div style={styles.timelineBox}>
                                             <div style={styles.timelineStop}>
-                                                <div style={styles.timeText}>{train.sourceDepartureTime ? train.sourceDepartureTime.substring(0, 5) : '08:00'}</div>
+                                                <div style={styles.timeText} className="font-mono">
+                                                    {train.sourceDepartureTime ? train.sourceDepartureTime.substring(0, 5) : '08:00'}
+                                                </div>
                                                 <div style={styles.stationName}>{train.sourceStationName || sourceStationObj?.name}</div>
                                             </div>
 
                                             <div style={styles.timelineBar}>
                                                 <div style={styles.timelineLine}></div>
                                                 <div style={styles.timelineDotStart}></div>
+                                                <div style={styles.timelineTrainIcon}>
+                                                    <Zap size={11} color="#38BDF8" />
+                                                </div>
                                                 <div style={styles.timelineDotEnd}></div>
                                             </div>
 
                                             <div style={styles.timelineStopEnd}>
-                                                <div style={styles.timeText}>{train.destinationArrivalTime ? train.destinationArrivalTime.substring(0, 5) : '18:30'}</div>
+                                                <div style={styles.timeText} className="font-mono">
+                                                    {train.destinationArrivalTime ? train.destinationArrivalTime.substring(0, 5) : '18:30'}
+                                                </div>
                                                 <div style={styles.stationName}>{train.destinationStationName || destStationObj?.name}</div>
                                             </div>
                                         </div>
 
                                         {/* Seat Classes Breakdown */}
                                         <div style={styles.classesSection}>
-                                            <span style={styles.sectionLabel}>Available Travel Classes</span>
+                                            <span style={styles.sectionLabel}>Configured Travel Coaches</span>
                                             <div style={styles.classesGrid}>
                                                 {train.seatClasses?.map((sc, i) => (
                                                     <div key={i} style={styles.classCard}>
                                                         <SeatClassBadge seatClass={sc.seatClass} />
-                                                        <span style={styles.classFare}>₹{sc.fairPerKm}/km</span>
+                                                        <span style={styles.classFare} className="font-mono">₹{sc.fairPerKm || sc.farePerKm}/km</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -392,32 +437,34 @@ const Search = () => {
                                             onClick={() => handleSelectTrain(train.trainId)}
                                             style={styles.bookBtn}
                                         >
-                                            <span>Check Availability & Book</span>
-                                            <ArrowRight size={18} />
+                                            <span>Check Live Availability & Reserve</span>
+                                            <ArrowRight size={17} />
                                         </button>
                                     </motion.div>
                                 ))}
                             </div>
                         ) : hasSearched ? (
                             <div style={styles.emptyCard}>
-                                <AlertCircle size={48} color="#F59E0B" style={{ opacity: 0.8, marginBottom: '1rem' }} />
-                                <h3>No Direct Trains on This Route</h3>
-                                <p style={{ color: '#94A3B8', maxWidth: '450px', margin: '0.5rem auto 1.5rem auto' }}>
-                                    We couldn't find a direct route between <b>{sourceStationObj?.name}</b> and <b>{destStationObj?.name}</b>. You can browse all active trains below.
+                                <AlertCircle size={48} color="#F59E0B" style={{ opacity: 0.85, marginBottom: '1rem' }} />
+                                <h3 className="font-display" style={{ color: 'var(--text-main)', fontSize: '1.4rem' }}>No Direct Trains on This Route</h3>
+                                <p style={{ color: 'var(--text-muted)', maxWidth: '460px', margin: '0.65rem auto 1.5rem auto', lineHeight: 1.5 }}>
+                                    We couldn't find a direct corridor between <b>{sourceStationObj?.name}</b> and <b>{destStationObj?.name}</b>. You can explore all available express routes below.
                                 </p>
                                 <button
                                     type="button"
                                     className="btn-secondary"
                                     onClick={() => setViewMode('catalog')}
                                 >
-                                    Browse All Trains ({allTrains.length})
+                                    Browse Complete Network Catalog ({allTrains.length})
                                 </button>
                             </div>
                         ) : (
                             <div style={styles.promptCard}>
-                                <Train size={48} color="#38BDF8" style={{ opacity: 0.6, marginBottom: '1rem' }} />
-                                <h3>Select Stations & Search</h3>
-                                <p style={{ color: '#94A3B8' }}>Choose your source and destination to discover fast express trains.</p>
+                                <Train size={54} color="#38BDF8" style={{ opacity: 0.65, marginBottom: '1rem' }} />
+                                <h3 className="font-display" style={{ color: 'var(--text-main)', fontSize: '1.4rem' }}>Select Corridor & Search</h3>
+                                <p style={{ color: 'var(--text-muted)', maxWidth: '420px', margin: '0.5rem auto' }}>
+                                    Choose your origin and destination station above to check live seat inventory and reserve express journeys.
+                                </p>
                             </div>
                         )}
                     </div>
@@ -429,9 +476,9 @@ const Search = () => {
                         {filteredCatalog.map((train, idx) => (
                             <motion.div
                                 key={`catalog-${train.id}`}
-                                initial={{ opacity: 0, y: 20 }}
+                                initial={{ opacity: 0, y: 25 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.04 }}
+                                transition={{ delay: idx * 0.04, duration: 0.4 }}
                                 style={styles.trainCard}
                             >
                                 <div style={styles.trainCardHeader}>
@@ -441,18 +488,21 @@ const Search = () => {
                                         </div>
                                         <div>
                                             <h3 style={styles.trainName}>{train.name}</h3>
-                                            <span style={styles.trainCode}>{train.code} • {train.trainType}</span>
+                                            <div style={styles.badgeRow}>
+                                                <span style={styles.trainCode} className="font-mono">{train.code}</span>
+                                                <TrainTypeBadge type={train.trainType} />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div style={styles.classesSection}>
-                                    <span style={styles.sectionLabel}>Configured Classes</span>
+                                    <span style={styles.sectionLabel}>Available Classes</span>
                                     <div style={styles.classesGrid}>
                                         {train.seatConfigResponseList?.map((sc, i) => (
                                             <div key={i} style={styles.classCard}>
                                                 <SeatClassBadge seatClass={sc.seatClass} />
-                                                <span style={styles.classFare}>₹{sc.fairPerKm}/km</span>
+                                                <span style={styles.classFare} className="font-mono">₹{sc.fairPerKm || sc.farePerKm}/km</span>
                                             </div>
                                         ))}
                                     </div>
@@ -464,7 +514,7 @@ const Search = () => {
                                     onClick={() => toggleTrainRoute(train.id)}
                                     style={styles.expandStopsBtn}
                                 >
-                                    <span>Route Stops & Schedule</span>
+                                    <span>Route Halts & Schedule</span>
                                     {expandedTrainId === train.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                 </button>
 
@@ -475,6 +525,7 @@ const Search = () => {
                                             initial={{ height: 0, opacity: 0 }}
                                             animate={{ height: 'auto', opacity: 1 }}
                                             exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.3 }}
                                             style={styles.stopsDropdown}
                                         >
                                             {trainRoutes[train.id] ? (
@@ -482,24 +533,29 @@ const Search = () => {
                                                     <div style={styles.stopsTimeline}>
                                                         {trainRoutes[train.id].map((stop, sIdx) => (
                                                             <div key={sIdx} style={styles.stopRow}>
-                                                                <div style={styles.stopOrder}>#{stop.stopOrder || sIdx + 1}</div>
+                                                                <div style={styles.stopOrder} className="font-mono">#{stop.stopOrder || sIdx + 1}</div>
                                                                 <div style={styles.stopDetails}>
-                                                                    <div style={styles.stopStationName}>Station {stop.stationId}</div>
-                                                                    <div style={styles.stopTimes}>
+                                                                    <div style={styles.stopStationName}>
+                                                                        {(() => {
+                                                                            const st = stations.find(s => s.id === stop.stationId || s.id?.toString() === stop.stationId?.toString());
+                                                                            return st ? `${st.name} (${st.code})` : `Station #${stop.stationId}`;
+                                                                        })()}
+                                                                    </div>
+                                                                    <div style={styles.stopTimes} className="font-mono">
                                                                         Arr: {stop.arrivalTime ? stop.arrivalTime.substring(0, 5) : '--:--'} | Dep: {stop.departureTime ? stop.departureTime.substring(0, 5) : '--:--'}
                                                                     </div>
                                                                 </div>
-                                                                <div style={styles.stopDistance}>{stop.distanceFromSourceKm || 0} km</div>
+                                                                <div style={styles.stopDistance} className="font-mono">{stop.distanceFromSourceKm || 0} km</div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <p style={{ color: '#94A3B8', fontSize: '0.85rem', textAlign: 'center', padding: '0.5rem' }}>
+                                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '0.5rem' }}>
                                                         No route stops configured for this train yet.
                                                     </p>
                                                 )
                                             ) : (
-                                                <p style={{ color: '#94A3B8', fontSize: '0.85rem', textAlign: 'center', padding: '0.5rem' }}>
+                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '0.5rem' }}>
                                                     Loading route stops...
                                                 </p>
                                             )}
@@ -513,8 +569,8 @@ const Search = () => {
                                     onClick={() => handleSelectTrain(train.id)}
                                     style={styles.bookBtn}
                                 >
-                                    <span>Select Train</span>
-                                    <ArrowRight size={18} />
+                                    <span>Select Train & Configure</span>
+                                    <ArrowRight size={17} />
                                 </button>
                             </motion.div>
                         ))}
@@ -532,12 +588,12 @@ const styles = {
         paddingBottom: '5rem',
     },
     main: {
-        maxWidth: '1280px',
+        maxWidth: '1320px',
         margin: '0 auto',
         padding: '2.5rem 1.5rem',
     },
     heroSection: {
-        marginBottom: '3rem',
+        marginBottom: '2.75rem',
     },
     heroHeader: {
         textAlign: 'center',
@@ -546,37 +602,40 @@ const styles = {
     badge: {
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '0.4rem',
-        padding: '0.4rem 0.9rem',
+        gap: '0.45rem',
+        padding: '0.4rem 1rem',
         background: 'rgba(56, 189, 248, 0.1)',
-        border: '1px solid rgba(56, 189, 248, 0.25)',
+        border: '1px solid rgba(56, 189, 248, 0.28)',
         borderRadius: '9999px',
-        color: '#38BDF8',
+        color: 'var(--accent-primary)',
         fontSize: '0.8rem',
         fontWeight: 700,
         marginBottom: '1rem',
+        letterSpacing: '0.02em'
     },
     heroTitle: {
-        fontSize: '2.5rem',
+        fontSize: '2.6rem',
         fontWeight: 800,
-        color: '#F8FAFC',
+        color: 'var(--text-main)',
         letterSpacing: '-0.025em',
         margin: '0 0 0.5rem 0',
+        lineHeight: 1.15
     },
     heroSubtitle: {
-        color: '#94A3B8',
+        color: 'var(--text-muted)',
         fontSize: '1.05rem',
-        maxWidth: '650px',
+        maxWidth: '660px',
         margin: '0 auto',
+        lineHeight: 1.5
     },
     searchCard: {
-        background: 'rgba(17, 27, 49, 0.75)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '24px',
-        padding: '1.75rem',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 30px rgba(56, 189, 248, 0.08)',
+        background: 'var(--bg-card)',
+        backdropFilter: 'blur(28px)',
+        WebkitBackdropFilter: 'blur(28px)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '26px',
+        padding: '1.85rem',
+        boxShadow: 'var(--shadow-xl), var(--glass-glow)',
     },
     searchForm: {
         display: 'grid',
@@ -587,57 +646,85 @@ const styles = {
     formCol: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.4rem',
+        gap: '0.45rem',
     },
     formColDate: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.4rem',
+        gap: '0.45rem',
     },
     label: {
         display: 'flex',
         alignItems: 'center',
         gap: '0.4rem',
-        fontSize: '0.82rem',
+        fontSize: '0.8rem',
         fontWeight: 700,
-        color: '#CBD5E1',
+        color: 'var(--text-secondary)',
         textTransform: 'uppercase',
         letterSpacing: '0.04em',
     },
     select: {
-        padding: '0.85rem 1rem',
-        background: 'rgba(255, 255, 255, 0.04)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '12px',
-        color: '#F8FAFC',
+        padding: '0.85rem 1.1rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '14px',
+        color: 'var(--text-main)',
         fontSize: '0.95rem',
     },
     dateInput: {
-        padding: '0.85rem 1rem',
-        background: 'rgba(255, 255, 255, 0.04)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '12px',
-        color: '#F8FAFC',
+        padding: '0.85rem 1.1rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '14px',
+        color: 'var(--text-main)',
         fontSize: '0.95rem',
     },
     swapBtn: {
-        width: '46px',
-        height: '46px',
-        borderRadius: '12px',
+        width: '48px',
+        height: '48px',
+        borderRadius: '14px',
         background: 'rgba(56, 189, 248, 0.1)',
-        border: '1px solid rgba(56, 189, 248, 0.25)',
+        border: '1px solid rgba(56, 189, 248, 0.3)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
         alignSelf: 'flex-end',
         marginBottom: '2px',
+        boxShadow: '0 0 15px rgba(56, 189, 248, 0.15)'
     },
     searchSubmitBtn: {
-        padding: '0.85rem 1.75rem',
-        height: '48px',
+        padding: '0.85rem 1.85rem',
+        height: '50px',
         alignSelf: 'flex-end',
-        borderRadius: '12px',
+        borderRadius: '14px',
+    },
+    quickDatesRow: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.6rem',
+        marginTop: '1.25rem',
+        paddingTop: '1rem',
+        borderTop: '1px solid var(--glass-border)',
+        flexWrap: 'wrap'
+    },
+    quickDatesLabel: {
+        fontSize: '0.78rem',
+        fontWeight: 700,
+        color: 'var(--text-dim)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.04em'
+    },
+    quickDateChip: {
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '8px',
+        padding: '0.35rem 0.75rem',
+        fontSize: '0.78rem',
+        fontWeight: 600,
+        color: 'var(--text-secondary)',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease'
     },
     tabsContainer: {
         display: 'flex',
@@ -650,37 +737,42 @@ const styles = {
     tabs: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        background: 'rgba(255, 255, 255, 0.03)',
+        gap: '0.4rem',
+        background: 'var(--glass-bg-subtle)',
         padding: '0.35rem',
-        borderRadius: '14px',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
+        borderRadius: '16px',
+        border: '1px solid var(--glass-border)',
     },
     tabBtn: {
-        padding: '0.6rem 1.25rem',
-        borderRadius: '10px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        padding: '0.65rem 1.35rem',
+        borderRadius: '12px',
         border: 'none',
         background: 'transparent',
-        color: '#94A3B8',
-        fontWeight: 600,
+        color: 'var(--text-muted)',
+        fontWeight: 700,
         fontSize: '0.9rem',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
     },
     tabBtnActive: {
-        background: 'rgba(56, 189, 248, 0.15)',
-        color: '#38BDF8',
+        background: 'rgba(56, 189, 248, 0.18)',
+        color: 'var(--accent-primary)',
+        boxShadow: '0 0 15px rgba(56, 189, 248, 0.2)',
+        border: '1px solid rgba(56, 189, 248, 0.35)'
     },
     filterBox: {
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        background: 'rgba(255, 255, 255, 0.03)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '12px',
-        padding: '0.4rem 1rem',
-        minWidth: '280px',
+        gap: '0.6rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '14px',
+        padding: '0.45rem 1.15rem',
+        minWidth: '290px',
     },
     filterInput: {
         background: 'transparent',
@@ -688,29 +780,30 @@ const styles = {
         padding: '0.4rem 0',
         fontSize: '0.9rem',
         boxShadow: 'none',
+        color: 'var(--text-main)'
     },
     resultsGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(370px, 1fr))',
         gap: '1.75rem',
     },
     catalogGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(370px, 1fr))',
         gap: '1.75rem',
     },
     trainCard: {
-        background: 'rgba(17, 27, 49, 0.65)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '20px',
-        padding: '1.75rem',
+        background: 'var(--bg-card)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '24px',
+        padding: '1.85rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '1.25rem',
+        gap: '1.35rem',
         transition: 'all 0.25s ease',
-        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.4)',
+        boxShadow: 'var(--shadow-md)',
     },
     trainCardHeader: {
         display: 'flex',
@@ -721,38 +814,46 @@ const styles = {
     trainIdentity: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.85rem',
+        gap: '0.95rem',
     },
     trainIconBox: {
-        width: '46px',
-        height: '46px',
-        borderRadius: '12px',
-        background: 'rgba(56, 189, 248, 0.1)',
+        width: '50px',
+        height: '50px',
+        borderRadius: '14px',
+        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.18) 0%, rgba(2, 132, 199, 0.18) 100%)',
+        border: '1px solid rgba(56, 189, 248, 0.35)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
+        boxShadow: '0 0 15px rgba(56, 189, 248, 0.2)'
     },
     trainName: {
         margin: 0,
-        fontSize: '1.15rem',
+        fontSize: '1.2rem',
         fontWeight: 800,
-        color: '#F8FAFC',
+        color: 'var(--text-main)',
         lineHeight: 1.2,
+    },
+    badgeRow: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.45rem',
+        marginTop: '0.35rem'
     },
     trainCode: {
         fontSize: '0.8rem',
-        color: '#94A3B8',
-        fontWeight: 600,
+        color: 'var(--text-muted)',
+        fontWeight: 700,
     },
     distanceBadge: {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '0.35rem',
-        padding: '0.3rem 0.65rem',
-        borderRadius: '8px',
+        padding: '0.35rem 0.75rem',
+        borderRadius: '10px',
         background: 'rgba(16, 185, 129, 0.1)',
-        border: '1px solid rgba(16, 185, 129, 0.25)',
+        border: '1px solid rgba(16, 185, 129, 0.3)',
         color: '#10B981',
         fontSize: '0.78rem',
         fontWeight: 700,
@@ -761,10 +862,10 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '1rem 1.25rem',
-        background: 'rgba(0, 0, 0, 0.25)',
-        borderRadius: '14px',
-        border: '1px solid rgba(255, 255, 255, 0.04)',
+        padding: '1.1rem 1.35rem',
+        background: 'var(--glass-bg-subtle)',
+        borderRadius: '16px',
+        border: '1px solid var(--glass-border)',
     },
     timelineStop: {
         display: 'flex',
@@ -776,15 +877,15 @@ const styles = {
         alignItems: 'flex-end',
     },
     timeText: {
-        fontSize: '1.1rem',
+        fontSize: '1.15rem',
         fontWeight: 800,
-        color: '#F8FAFC',
+        color: 'var(--text-main)',
     },
     stationName: {
-        fontSize: '0.8rem',
-        color: '#94A3B8',
-        fontWeight: 500,
-        maxWidth: '120px',
+        fontSize: '0.82rem',
+        color: 'var(--text-muted)',
+        fontWeight: 600,
+        maxWidth: '130px',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -793,8 +894,8 @@ const styles = {
         flex: 1,
         position: 'relative',
         height: '2px',
-        background: 'rgba(255, 255, 255, 0.12)',
-        margin: '0 1rem',
+        background: 'var(--glass-border)',
+        margin: '0 1.25rem',
     },
     timelineLine: {
         position: 'absolute',
@@ -815,6 +916,20 @@ const styles = {
         background: '#38BDF8',
         boxShadow: '0 0 8px #38BDF8',
     },
+    timelineTrainIcon: {
+        position: 'absolute',
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '18px',
+        height: '18px',
+        borderRadius: '50%',
+        background: 'var(--bg-primary)',
+        border: '1px solid #38BDF8',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     timelineDotEnd: {
         position: 'absolute',
         right: 0,
@@ -829,92 +944,92 @@ const styles = {
     classesSection: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem',
+        gap: '0.6rem',
     },
     sectionLabel: {
         fontSize: '0.75rem',
-        fontWeight: 700,
-        color: '#64748B',
+        fontWeight: 800,
+        color: 'var(--text-dim)',
         textTransform: 'uppercase',
-        letterSpacing: '0.04em',
+        letterSpacing: '0.05em',
     },
     classesGrid: {
         display: 'flex',
         flexWrap: 'wrap',
-        gap: '0.5rem',
+        gap: '0.55rem',
     },
     classCard: {
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '0.4rem',
-        background: 'rgba(255, 255, 255, 0.03)',
-        padding: '0.35rem 0.65rem',
-        borderRadius: '8px',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
+        gap: '0.45rem',
+        background: 'var(--glass-bg-subtle)',
+        padding: '0.35rem 0.75rem',
+        borderRadius: '10px',
+        border: '1px solid var(--glass-border)',
     },
     classFare: {
-        fontSize: '0.75rem',
+        fontSize: '0.78rem',
         fontWeight: 700,
-        color: '#CBD5E1',
+        color: 'var(--text-secondary)',
     },
     bookBtn: {
         width: '100%',
-        padding: '0.85rem',
-        borderRadius: '12px',
+        padding: '0.9rem',
+        borderRadius: '14px',
         marginTop: 'auto',
     },
     expandStopsBtn: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0.6rem 0.85rem',
-        background: 'rgba(255, 255, 255, 0.03)',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
-        borderRadius: '10px',
-        color: '#CBD5E1',
+        padding: '0.65rem 0.95rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '12px',
+        color: 'var(--text-secondary)',
         fontSize: '0.85rem',
-        fontWeight: 600,
+        fontWeight: 700,
         cursor: 'pointer',
     },
     stopsDropdown: {
         overflow: 'hidden',
-        background: 'rgba(0, 0, 0, 0.25)',
-        borderRadius: '12px',
-        padding: '0.75rem',
-        border: '1px solid rgba(255, 255, 255, 0.04)',
+        background: 'var(--glass-bg-subtle)',
+        borderRadius: '14px',
+        padding: '0.85rem',
+        border: '1px solid var(--glass-border)',
     },
     stopsTimeline: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem',
+        gap: '0.6rem',
     },
     stopRow: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         fontSize: '0.82rem',
-        padding: '0.35rem 0',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+        padding: '0.4rem 0',
+        borderBottom: '1px solid var(--glass-border)',
     },
     stopOrder: {
-        color: '#38BDF8',
-        fontWeight: 700,
-        width: '30px',
+        color: 'var(--accent-primary)',
+        fontWeight: 800,
+        width: '32px',
     },
     stopDetails: {
         flex: 1,
     },
     stopStationName: {
-        color: '#F8FAFC',
-        fontWeight: 600,
+        color: 'var(--text-main)',
+        fontWeight: 700,
     },
     stopTimes: {
-        color: '#64748B',
+        color: 'var(--text-dim)',
         fontSize: '0.75rem',
     },
     stopDistance: {
-        color: '#94A3B8',
-        fontWeight: 600,
+        color: 'var(--text-muted)',
+        fontWeight: 700,
     },
     loadingBox: {
         textAlign: 'center',
@@ -922,17 +1037,17 @@ const styles = {
     },
     emptyCard: {
         textAlign: 'center',
-        padding: '4rem 2rem',
-        background: 'rgba(17, 27, 49, 0.5)',
-        borderRadius: '24px',
-        border: '1px dashed rgba(255, 255, 255, 0.1)',
+        padding: '4.5rem 2rem',
+        background: 'var(--bg-card)',
+        borderRadius: '26px',
+        border: '1px dashed var(--glass-border)',
     },
     promptCard: {
         textAlign: 'center',
-        padding: '4rem 2rem',
-        background: 'rgba(17, 27, 49, 0.3)',
-        borderRadius: '24px',
-        border: '1px dashed rgba(255, 255, 255, 0.08)',
+        padding: '4.5rem 2rem',
+        background: 'var(--bg-card)',
+        borderRadius: '26px',
+        border: '1px dashed var(--glass-border)',
     }
 };
 

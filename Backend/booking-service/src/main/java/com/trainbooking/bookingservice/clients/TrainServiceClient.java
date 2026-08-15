@@ -25,5 +25,18 @@ public class TrainServiceClient {
         ,trainId,sourceId,destinationId,seatClass).retrieve().body(FareInfo.class);
     }
 
+    public TrainEnrichmentResponse getEnrichmentData(Long trainId, Long sourceId, Long destinationId){
+        return restClient.get().uri("/train/internal/booking-enrichment?trainId={t}&sourceId={s}&destId={d}",trainId,sourceId,destinationId)
+                .retrieve().body(TrainEnrichmentResponse.class);
+    }
+
     public record FareInfo(Long trainId, Integer distanceKm, BigDecimal farePerKm){}
+
+    public record TrainEnrichmentResponse(
+            String trainName, String trainCode, String trainType,
+            String sourceName, String sourceCity,
+            String destName, String destCity,
+            java.time.LocalTime departureTime, java.time.LocalTime arrivalTime,
+            Integer distanceKm
+    ) {}
 }

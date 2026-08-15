@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Train, Search, Ticket, ShieldCheck, LogOut, User, Sun, Moon } from 'lucide-react';
+import { Train, Search, Ticket, ShieldCheck, LogOut, Sun, Moon, Sparkles, LogIn, UserPlus, Compass } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 
@@ -10,8 +10,6 @@ export const Navbar = () => {
     const { isDark, toggleTheme } = useContext(ThemeContext);
     const navigate = useNavigate();
     const location = useLocation();
-
-    if (!isAuthenticated) return null;
 
     const isActive = (path) => location.pathname === path;
 
@@ -36,18 +34,22 @@ export const Navbar = () => {
                 {/* Brand */}
                 <Link to="/" style={styles.brand}>
                     <motion.div
-                        whileHover={{ rotate: 10, scale: 1.1 }}
+                        whileHover={{ rotate: 8, scale: 1.08 }}
+                        whileTap={{ scale: 0.95 }}
                         style={styles.logoBadge}
                     >
-                        <Train size={22} color="#070B12" />
+                        <Train size={22} color="#FFFFFF" />
                     </motion.div>
                     <div>
-                        <div style={styles.brandTitle}>TBS Rail</div>
-                        <div style={styles.brandSubtitle}>Express Reservation</div>
+                        <div style={styles.brandTitleWrap}>
+                            <span className="font-display" style={styles.brandTitle}>TBS Rail</span>
+                            <span style={styles.liveDot} className="live-pulse" title="System Online" />
+                        </div>
+                        <div style={styles.brandSubtitle}>Express Reservation Engine</div>
                     </div>
                 </Link>
 
-                {/* Nav Links */}
+                {/* Navigation Links */}
                 <nav style={styles.navLinks}>
                     <Link
                         to="/"
@@ -56,9 +58,36 @@ export const Navbar = () => {
                             ...(isActive('/') ? styles.navLinkActive : {})
                         }}
                     >
-                        <Ticket size={18} />
-                        <span>My Bookings</span>
+                        <Compass size={17} />
+                        <span>Explore</span>
+                        {isActive('/') && (
+                            <motion.div 
+                                layoutId="navIndicator" 
+                                style={styles.activeIndicator} 
+                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                            />
+                        )}
                     </Link>
+
+                    {isAuthenticated && (
+                        <Link
+                            to="/dashboard"
+                            style={{
+                                ...styles.navLink,
+                                ...(isActive('/dashboard') ? styles.navLinkActive : {})
+                            }}
+                        >
+                            <Ticket size={17} />
+                            <span>My Journeys</span>
+                            {isActive('/dashboard') && (
+                                <motion.div 
+                                    layoutId="navIndicator" 
+                                    style={styles.activeIndicator} 
+                                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                />
+                            )}
+                        </Link>
+                    )}
 
                     <Link
                         to="/search"
@@ -67,31 +96,45 @@ export const Navbar = () => {
                             ...(isActive('/search') ? styles.navLinkActive : {})
                         }}
                     >
-                        <Search size={18} />
+                        <Search size={17} />
                         <span>Find Trains</span>
+                        {isActive('/search') && (
+                            <motion.div 
+                                layoutId="navIndicator" 
+                                style={styles.activeIndicator} 
+                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                            />
+                        )}
                     </Link>
 
-                    {isAdmin && (
+                    {isAuthenticated && isAdmin && (
                         <Link
                             to="/admin"
                             style={{
                                 ...styles.navLink,
                                 ...(isActive('/admin') ? styles.adminLinkActive : {}),
-                                color: isActive('/admin') ? '#F59E0B' : '#CBD5E1'
+                                color: isActive('/admin') ? '#F59E0B' : 'var(--text-muted)'
                             }}
                         >
-                            <ShieldCheck size={18} color="#F59E0B" />
-                            <span>Admin Portal</span>
+                            <ShieldCheck size={17} color={isActive('/admin') ? '#F59E0B' : 'var(--text-muted)'} />
+                            <span>Command Hub</span>
+                            {isActive('/admin') && (
+                                <motion.div 
+                                    layoutId="navIndicator" 
+                                    style={{ ...styles.activeIndicator, background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(245, 158, 11, 0.1) 100%)', borderColor: 'rgba(245, 158, 11, 0.4)' }} 
+                                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                />
+                            )}
                         </Link>
                     )}
                 </nav>
 
-                {/* User & Actions */}
+                {/* User & Actions Section */}
                 <div style={styles.rightSection}>
                     {/* Dark/Light Mode Switcher */}
                     <motion.button
-                        whileHover={{ scale: 1.08 }}
-                        whileTap={{ scale: 0.92 }}
+                        whileHover={{ scale: 1.08, rotate: 15 }}
+                        whileTap={{ scale: 0.9 }}
                         onClick={toggleTheme}
                         style={styles.themeToggleBtn}
                         title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
@@ -104,27 +147,47 @@ export const Navbar = () => {
                         )}
                     </motion.button>
 
-                    {/* User Profile Badge */}
-                    <div style={styles.userBadge}>
-                        <div style={styles.avatar}>
-                            <span style={styles.initialsText}>{getInitials(displayName)}</span>
-                        </div>
-                        <div style={styles.userInfo}>
-                            <span style={styles.userName}>{displayName}</span>
-                            {isAdmin && <span style={styles.roleTag}>ADMIN</span>}
-                        </div>
-                    </div>
+                    {isAuthenticated ? (
+                        <>
+                            {/* User Profile Badge */}
+                            <div style={styles.userBadge}>
+                                <div style={styles.avatar}>
+                                    <span style={styles.initialsText} className="font-mono">{getInitials(displayName)}</span>
+                                </div>
+                                <div style={styles.userInfo}>
+                                    <span style={styles.userName}>{displayName}</span>
+                                    {isAdmin ? (
+                                        <span style={styles.roleTagAdmin}>ADMIN</span>
+                                    ) : (
+                                        <span style={styles.roleTagPassenger}>PASSENGER</span>
+                                    )}
+                                </div>
+                            </div>
 
-                    <motion.button
-                        whileHover={{ scale: 1.05, backgroundColor: 'rgba(244, 63, 94, 0.2)' }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={logout}
-                        style={styles.logoutBtn}
-                        title="Sign Out"
-                    >
-                        <LogOut size={18} />
-                        <span style={styles.logoutText}>Logout</span>
-                    </motion.button>
+                            {/* Sign Out */}
+                            <motion.button
+                                whileHover={{ scale: 1.05, backgroundColor: 'rgba(244, 63, 94, 0.18)' }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={logout}
+                                style={styles.logoutBtn}
+                                title="Sign Out"
+                            >
+                                <LogOut size={16} />
+                                <span style={styles.logoutText}>Logout</span>
+                            </motion.button>
+                        </>
+                    ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                            <Link to="/login" style={styles.signInBtn}>
+                                <LogIn size={15} />
+                                <span>Sign In</span>
+                            </Link>
+                            <Link to="/signup" className="btn-primary" style={{ padding: '0.55rem 1.15rem', fontSize: '0.85rem' }}>
+                                <UserPlus size={15} />
+                                <span>Get Started</span>
+                            </Link>
+                        </div>
+                    )}
                 </div>
             </div>
         </header>
@@ -136,13 +199,14 @@ const styles = {
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        background: 'rgba(7, 11, 18, 0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+        background: 'var(--glass-bg)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderBottom: '1px solid var(--glass-border)',
+        boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.25)'
     },
     navContainer: {
-        maxWidth: '1280px',
+        maxWidth: '1320px',
         margin: '0 auto',
         padding: '0.85rem 1.5rem',
         display: 'flex',
@@ -153,61 +217,84 @@ const styles = {
     brand: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.75rem',
+        gap: '0.85rem',
         textDecoration: 'none',
         color: 'var(--text-main)'
     },
     logoBadge: {
-        width: '38px',
-        height: '38px',
-        borderRadius: '10px',
+        width: '42px',
+        height: '42px',
+        borderRadius: '12px',
         background: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 0 15px rgba(56, 189, 248, 0.4)'
+        boxShadow: '0 0 20px rgba(56, 189, 248, 0.4)',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+    },
+    brandTitleWrap: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.45rem'
     },
     brandTitle: {
         fontWeight: 800,
-        fontSize: '1.15rem',
+        fontSize: '1.25rem',
         letterSpacing: '-0.02em',
-        lineHeight: 1.1
+        lineHeight: 1.1,
+        color: 'var(--text-main)'
+    },
+    liveDot: {
+        width: '7px',
+        height: '7px',
+        borderRadius: '50%',
+        backgroundColor: '#10B981',
+        display: 'inline-block'
     },
     brandSubtitle: {
-        fontSize: '0.7rem',
-        color: '#64748B',
-        fontWeight: 500,
+        fontSize: '0.68rem',
+        color: 'var(--text-dim)',
+        fontWeight: 600,
         textTransform: 'uppercase',
-        letterSpacing: '0.05em'
+        letterSpacing: '0.06em'
     },
     navLinks: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
+        gap: '0.35rem',
         background: 'var(--glass-bg-subtle)',
-        padding: '0.3rem 0.5rem',
-        borderRadius: '12px',
+        padding: '0.35rem',
+        borderRadius: '14px',
         border: '1px solid var(--glass-border)'
     },
     navLink: {
+        position: 'relative',
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        padding: '0.55rem 1rem',
-        borderRadius: '8px',
+        gap: '0.55rem',
+        padding: '0.6rem 1.15rem',
+        borderRadius: '10px',
         textDecoration: 'none',
         color: 'var(--text-muted)',
         fontSize: '0.9rem',
         fontWeight: 600,
-        transition: 'all 0.2s ease'
+        transition: 'color 0.2s ease',
+        zIndex: 1
     },
     navLinkActive: {
-        background: 'rgba(56, 189, 248, 0.15)',
         color: 'var(--accent-primary)'
     },
     adminLinkActive: {
-        background: 'rgba(245, 158, 11, 0.15)',
         color: '#F59E0B'
+    },
+    activeIndicator: {
+        position: 'absolute',
+        inset: 0,
+        borderRadius: '10px',
+        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.18) 0%, rgba(56, 189, 248, 0.06) 100%)',
+        border: '1px solid rgba(56, 189, 248, 0.35)',
+        zIndex: -1,
+        boxShadow: '0 0 15px rgba(56, 189, 248, 0.2)'
     },
     rightSection: {
         display: 'flex',
@@ -215,9 +302,9 @@ const styles = {
         gap: '0.85rem'
     },
     themeToggleBtn: {
-        width: '38px',
-        height: '38px',
-        borderRadius: '10px',
+        width: '40px',
+        height: '40px',
+        borderRadius: '12px',
         background: 'var(--glass-bg-subtle)',
         border: '1px solid var(--glass-border)',
         display: 'flex',
@@ -226,20 +313,34 @@ const styles = {
         cursor: 'pointer',
         transition: 'all 0.2s ease'
     },
+    signInBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.45rem',
+        padding: '0.55rem 1rem',
+        borderRadius: '12px',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        color: 'var(--text-main)',
+        fontSize: '0.85rem',
+        fontWeight: 700,
+        textDecoration: 'none',
+        transition: 'all 0.2s ease'
+    },
     userBadge: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.65rem',
-        padding: '0.4rem 0.85rem',
+        gap: '0.75rem',
+        padding: '0.4rem 0.95rem 0.4rem 0.5rem',
         background: 'var(--glass-bg-subtle)',
         border: '1px solid var(--glass-border)',
-        borderRadius: '12px'
+        borderRadius: '14px'
     },
     avatar: {
-        width: '32px',
-        height: '32px',
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(2, 132, 199, 0.25) 100%)',
+        width: '34px',
+        height: '34px',
+        borderRadius: '10px',
+        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%)',
         border: '1px solid rgba(56, 189, 248, 0.4)',
         display: 'flex',
         alignItems: 'center',
@@ -247,7 +348,7 @@ const styles = {
         flexShrink: 0
     },
     initialsText: {
-        fontSize: '0.78rem',
+        fontSize: '0.8rem',
         fontWeight: 800,
         color: 'var(--accent-primary)',
         letterSpacing: '0.05em'
@@ -262,23 +363,29 @@ const styles = {
         color: 'var(--text-main)',
         lineHeight: 1.2
     },
-    roleTag: {
-        fontSize: '0.65rem',
+    roleTagAdmin: {
+        fontSize: '0.62rem',
         fontWeight: 800,
         color: '#F59E0B',
-        letterSpacing: '0.05em'
+        letterSpacing: '0.06em'
+    },
+    roleTagPassenger: {
+        fontSize: '0.62rem',
+        fontWeight: 700,
+        color: 'var(--accent-primary)',
+        letterSpacing: '0.06em'
     },
     logoutBtn: {
         display: 'flex',
         alignItems: 'center',
-        gap: '0.4rem',
-        padding: '0.55rem 0.9rem',
+        gap: '0.45rem',
+        padding: '0.6rem 0.95rem',
         background: 'rgba(244, 63, 94, 0.1)',
         color: '#FDA4AF',
         border: '1px solid rgba(244, 63, 94, 0.25)',
-        borderRadius: '10px',
+        borderRadius: '12px',
         fontSize: '0.85rem',
-        fontWeight: 600,
+        fontWeight: 700,
         cursor: 'pointer',
         transition: 'all 0.2s ease'
     },

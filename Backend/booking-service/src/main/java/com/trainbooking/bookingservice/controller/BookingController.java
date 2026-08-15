@@ -2,6 +2,7 @@ package com.trainbooking.bookingservice.controller;
 
 import com.trainbooking.bookingservice.dto.BookingResponse;
 import com.trainbooking.bookingservice.dto.CreateBookingRequest;
+import com.trainbooking.bookingservice.dto.EnrichedBookingResponse;
 import com.trainbooking.bookingservice.service.BookingCommandService;
 import com.trainbooking.bookingservice.service.BookingQueryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -121,5 +122,18 @@ public class BookingController {
                 "status", "CANCELLED",
                 "message", "Booking cancelled successfully. Seats have been restored."
         ));
+    }
+
+
+    @GetMapping("/my-enriched")
+    @Operation(summary = "Get my enriched bookings for the Dashboard")
+    public Page<EnrichedBookingResponse> getMyEnrichedBookings(
+            HttpServletRequest httpServletRequest,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("travelDate").descending());
+        UUID userId = (UUID) httpServletRequest.getAttribute("USER_ID");
+        return bookingQueryService.getEnrichedBookingsForUser(userId, pageable);
     }
 }

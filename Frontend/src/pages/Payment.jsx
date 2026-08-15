@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     CreditCard, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, 
-    ShieldCheck, Ticket, Download, ArrowRight, Sparkles, RefreshCw 
+    ShieldCheck, Ticket, Download, ArrowRight, Sparkles, RefreshCw,
+    Copy, Check, QrCode, Lock, Zap
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
@@ -20,6 +21,32 @@ const Payment = () => {
     const [paymentStatus, setPaymentStatus] = useState(null); // 'CAPTURED', 'FAILED', null
     const [paymentOrder, setPaymentOrder] = useState(null);
     const [errorMessage, setErrorMessage] = useState('');
+    const [copiedPnr, setCopiedPnr] = useState(false);
+    const [stations, setStations] = useState([]);
+    const [trains, setTrains] = useState([]);
+
+    const pollIntervalRef = useRef(null);
+
+    useEffect(() => {
+        return () => {
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        };
+    }, []);
+
+    useEffect(() => {
+        api.get('/train/stations', { params: { page: 0, size: 100 } }).then(d => setStations(d.content || d || []));
+        api.get('/train/trains', { params: { page: 0, size: 100 } }).then(d => setTrains(d.content || d || []));
+    }, []);
+
+    const getStationName = (id) => {
+        const s = stations.find(x => x.id?.toString() === id?.toString());
+        return s ? `${s.name} (${s.code})` : `Station ${id}`;
+    };
+
+    const getTrainName = (id) => {
+        const t = trains.find(x => x.id?.toString() === id?.toString());
+        return t ? `${t.name} (${t.code})` : `Train #${id}`;
+    };
 
     // Fetch booking details
     useEffect(() => {
@@ -58,6 +85,16 @@ const Payment = () => {
             script.onerror = () => resolve(false);
             document.body.appendChild(script);
         });
+    };
+
+    // Copy PNR helper
+    const handleCopyPnr = () => {
+        if (booking?.pnr) {
+            navigator.clipboard.writeText(booking.pnr);
+            setCopiedPnr(true);
+            showToast('PNR copied to clipboard!', 'info');
+            setTimeout(() => setCopiedPnr(false), 2000);
+        }
     };
 
     // Initiate Razorpay Checkout
@@ -172,13 +209,13 @@ const Payment = () => {
         let attempts = 0;
         const maxAttempts = 12;
 
-        const interval = setInterval(async () => {
+        pollIntervalRef.current = setInterval(async () => {
             attempts++;
             try {
                 // Check payment service
                 const payStatus = await api.get(`/payments/${targetBookingId}`);
                 if (payStatus && payStatus.status === 'CAPTURED') {
-                    clearInterval(interval);
+                    clearInterval(pollIntervalRef.current);
                     setPaymentStatus('CAPTURED');
                     setProcessingPayment(false);
                     showToast('Booking CONFIRMED! Payment verified.', 'success');
@@ -188,7 +225,7 @@ const Payment = () => {
                 // Check booking service
                 const freshBooking = await api.get(`/booking/bookings/${pnr}`);
                 if (freshBooking && freshBooking.status === 'CONFIRMED') {
-                    clearInterval(interval);
+                    clearInterval(pollIntervalRef.current);
                     setBooking(freshBooking);
                     setPaymentStatus('CAPTURED');
                     setProcessingPayment(false);
@@ -197,7 +234,7 @@ const Payment = () => {
                 }
 
                 if (attempts >= maxAttempts) {
-                    clearInterval(interval);
+                    clearInterval(pollIntervalRef.current);
                     setPaymentStatus('CAPTURED');
                     setProcessingPayment(false);
                     showToast('Payment processed. Check My Bookings for receipt.', 'info');
@@ -211,8 +248,8 @@ const Payment = () => {
     if (loading) {
         return (
             <div style={styles.centerBox}>
-                <Loader2 size={40} color="#38BDF8" className="spin" />
-                <p style={{ marginTop: '1rem', color: '#94A3B8' }}>Loading Payment Invoice...</p>
+                <div className="spin" style={{ fontSize: '3rem' }}>💳</div>
+                <p style={{ marginTop: '1.25rem', color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 600 }}>Loading Payment Gateway...</p>
             </div>
         );
     }
@@ -222,8 +259,8 @@ const Payment = () => {
             <main style={styles.main}>
                 {/* Top back button */}
                 <div style={styles.topNav}>
-                    <button onClick={() => navigate('/')} style={styles.backBtn}>
-                        <ArrowLeft size={20} />
+                    <button onClick={() => navigate('/dashboard')} style={styles.backBtn}>
+                        <ArrowLeft size={18} />
                         <span>Return to Dashboard</span>
                     </button>
                 </div>
@@ -232,26 +269,39 @@ const Payment = () => {
                     {/* Confirmed State / Celebration */}
                     {paymentStatus === 'CAPTURED' ? (
                         <motion.div 
-                            initial={{ opacity: 0, scale: 0.95 }}
+                            initial={{ opacity: 0, scale: 0.96 }}
                             animate={{ opacity: 1, scale: 1 }}
                             style={styles.successCard}
                         >
                             <div style={styles.successHeader}>
                                 <div style={styles.successBadge}>
-                                    <CheckCircle2 size={48} color="#10B981" />
+                                    <CheckCircle2 size={44} color="#10B981" />
                                 </div>
-                                <h1 style={styles.successTitle}>Booking Confirmed!</h1>
+                                <h1 className="font-display" style={styles.successTitle}>Reservation Confirmed!</h1>
                                 <p style={styles.successSubtitle}>
-                                    Your seat reservation is confirmed and transaction settled. A confirmation email has been dispatched.
+                                    Your electronic ticket has been generated and seats are locked. An instant confirmation receipt has been dispatched.
                                 </p>
                             </div>
 
-                            {/* Ticket Card Preview */}
-                            <div style={styles.ticketBox}>
+                            {/* Boarding Pass E-Ticket */}
+                            <div className="ticket-card" style={styles.ticketBox}>
+                                <div className="ticket-notch-left"></div>
+                                <div className="ticket-notch-right"></div>
+
                                 <div style={styles.ticketHeader}>
                                     <div>
-                                        <span style={styles.ticketLabel}>Passenger PNR</span>
-                                        <div style={styles.ticketPnr}>{booking?.pnr}</div>
+                                        <span style={styles.ticketLabel}>Passenger PNR Number</span>
+                                        <div style={styles.pnrCopyRow}>
+                                            <span style={styles.ticketPnr} className="font-mono">{booking?.pnr}</span>
+                                            <button 
+                                                type="button" 
+                                                onClick={handleCopyPnr}
+                                                style={styles.copyBtn}
+                                                title="Copy PNR"
+                                            >
+                                                {copiedPnr ? <Check size={14} color="#10B981" /> : <Copy size={14} />}
+                                            </button>
+                                        </div>
                                     </div>
                                     <StatusBadge status="CONFIRMED" />
                                 </div>
@@ -260,28 +310,46 @@ const Payment = () => {
 
                                 <div style={styles.ticketGrid}>
                                     <div style={styles.ticketItem}>
-                                        <span style={styles.ticketLabel}>Train ID</span>
-                                        <span style={styles.ticketValue}>{booking?.trainId}</span>
+                                        <span style={styles.ticketLabel}>Train Reference</span>
+                                        <span style={styles.ticketValue} className="font-mono">Express #{booking?.trainId}</span>
                                     </div>
                                     <div style={styles.ticketItem}>
                                         <span style={styles.ticketLabel}>Travel Date</span>
-                                        <span style={styles.ticketValue}>{booking?.travelDate}</span>
+                                        <span style={styles.ticketValue} className="font-mono">{booking?.travelDate}</span>
                                     </div>
                                     <div style={styles.ticketItem}>
-                                        <span style={styles.ticketLabel}>Class</span>
-                                        <span style={styles.ticketValue}>{booking?.seatClass}</span>
+                                        <span style={styles.ticketLabel}>Coach Class</span>
+                                        <div style={{ marginTop: '0.2rem' }}>
+                                            <SeatClassBadge seatClass={booking?.seatClass} />
+                                        </div>
                                     </div>
                                     <div style={styles.ticketItem}>
-                                        <span style={styles.ticketLabel}>Seats Booked</span>
-                                        <span style={styles.ticketValue}>{booking?.seatsBooked} Passenger(s)</span>
+                                        <span style={styles.ticketLabel}>Seats Reserved</span>
+                                        <span style={styles.ticketValue}>{booking?.seatsBooked} Passenger{booking?.seatsBooked > 1 ? 's' : ''}</span>
                                     </div>
                                 </div>
 
                                 <div style={styles.ticketDivider}></div>
 
-                                <div style={styles.ticketFooter}>
-                                    <span style={{ color: '#94A3B8', fontSize: '0.9rem' }}>Total Amount Paid</span>
-                                    <span style={styles.ticketAmount}>₹{booking?.fare}</span>
+                                {/* Barcode / Security strip simulation */}
+                                <div style={styles.barcodeSection}>
+                                    <div style={styles.barcodeLines}>
+                                        {[40, 20, 60, 30, 80, 25, 50, 70, 35, 90, 45, 20, 60, 30, 80, 50, 70, 35, 90, 45].map((h, i) => (
+                                            <div 
+                                                key={i} 
+                                                style={{
+                                                    width: i % 3 === 0 ? '3px' : '2px',
+                                                    height: '28px',
+                                                    backgroundColor: 'var(--text-muted)',
+                                                    opacity: 0.6
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                    <div style={styles.ticketAmountWrap}>
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>Amount Settled</span>
+                                        <span style={styles.ticketAmount} className="font-mono">₹{booking?.fare}</span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -289,11 +357,11 @@ const Payment = () => {
                             <div style={styles.successActions}>
                                 <button 
                                     className="btn-primary"
-                                    onClick={() => navigate('/')}
+                                    onClick={() => navigate('/dashboard')}
                                     style={{ flex: 1 }}
                                 >
                                     <Ticket size={18} />
-                                    <span>View in My Bookings</span>
+                                    <span>My Reservations</span>
                                 </button>
                                 <button 
                                     className="btn-secondary"
@@ -301,7 +369,7 @@ const Payment = () => {
                                     style={{ flex: 1 }}
                                 >
                                     <Download size={18} />
-                                    <span>Print Ticket</span>
+                                    <span>Download E-Ticket</span>
                                 </button>
                             </div>
                         </motion.div>
@@ -315,10 +383,10 @@ const Payment = () => {
                             {/* Card Header */}
                             <div style={styles.cardHeader}>
                                 <div style={styles.iconCircle}>
-                                    <CreditCard size={32} color="#070B12" />
+                                    <CreditCard size={32} color="#FFFFFF" />
                                 </div>
-                                <h1 style={styles.cardTitle}>Complete Payment</h1>
-                                <p style={styles.cardSubtitle}>Review your reservation details to finalize checkout</p>
+                                <h1 className="font-display" style={styles.cardTitle}>Complete Reservation</h1>
+                                <p style={styles.cardSubtitle}>Review journey invoice and complete instant payment</p>
                             </div>
 
                             {errorMessage && (
@@ -334,75 +402,85 @@ const Payment = () => {
                                     <div style={styles.summaryBox}>
                                         <div style={styles.summaryRow}>
                                             <span style={styles.summaryLabel}>PNR Reference</span>
-                                            <span style={styles.summaryValuePnr}>{booking.pnr}</span>
+                                            <span style={styles.summaryValuePnr} className="font-mono">{booking.pnr}</span>
                                         </div>
                                         <div style={styles.summaryDivider}></div>
                                         <div style={styles.summaryRow}>
-                                            <span style={styles.summaryLabel}>Train ID</span>
-                                            <span style={styles.summaryValue}>{booking.trainId}</span>
+                                            <span style={styles.summaryLabel}>Train Route</span>
+                                            <span style={styles.summaryValue} className="font-mono">{getTrainName(booking.trainId)}</span>
                                         </div>
                                         <div style={styles.summaryDivider}></div>
                                         <div style={styles.summaryRow}>
-                                            <span style={styles.summaryLabel}>Route Stations</span>
-                                            <span style={styles.summaryValue}>Station {booking.sourceStationId} → Station {booking.destinationStationId}</span>
+                                            <span style={styles.summaryLabel}>Corridor</span>
+                                            <span style={styles.summaryValue}>{getStationName(booking.sourceStationId)} → {getStationName(booking.destinationStationId)}</span>
                                         </div>
                                         <div style={styles.summaryDivider}></div>
                                         <div style={styles.summaryRow}>
-                                            <span style={styles.summaryLabel}>Journey Date</span>
-                                            <span style={styles.summaryValue}>{booking.travelDate}</span>
+                                            <span style={styles.summaryLabel}>Travel Date</span>
+                                            <span style={styles.summaryValue} className="font-mono">{booking.travelDate}</span>
                                         </div>
                                         <div style={styles.summaryDivider}></div>
                                         <div style={styles.summaryRow}>
                                             <span style={styles.summaryLabel}>Class & Allocation</span>
-                                            <span style={styles.summaryValue}>{booking.seatClass} ({booking.seatsBooked} seats)</span>
+                                            <span style={styles.summaryValue}>{booking.seatClass} ({booking.seatsBooked} passenger{booking.seatsBooked > 1 ? 's' : ''})</span>
                                         </div>
                                     </div>
+                                    {booking.status !== 'CANCELLED' && booking.status !== 'PAYMENT_FAILED' && booking.status !== 'FAILED' && (
+                                        <>
+                                            {/* Total Box */}
+                                            <div style={styles.totalBox}>
+                                                <div>
+                                                    <span style={styles.totalLabel}>Total Payable Fare</span>
+                                                    <div style={styles.totalDesc}>All taxes & dynamic booking fees included</div>
+                                                </div>
+                                                <div style={styles.totalValue} className="font-mono">₹{booking.fare}</div>
+                                            </div>
 
-                                    {/* Total Box */}
-                                    <div style={styles.totalBox}>
-                                        <div>
-                                            <span style={styles.totalLabel}>Total Payable Amount</span>
-                                            <div style={styles.totalDesc}>All taxes & dynamic fares included</div>
-                                        </div>
-                                        <div style={styles.totalValue}>₹{booking.fare}</div>
-                                    </div>
+                                            {/* Main Razorpay CTA */}
+                                            <button
+                                                type="button"
+                                                className="btn-primary"
+                                                onClick={handlePayNow}
+                                                disabled={processingPayment}
+                                                style={styles.payBtn}
+                                            >
+                                                {processingPayment ? (
+                                                    <>
+                                                        <Loader2 size={18} className="spin" />
+                                                        <span>Opening Razorpay Secure Gateway...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <ShieldCheck size={20} />
+                                                        <span>Pay ₹{booking.fare} with Razorpay</span>
+                                                    </>
+                                                )}
+                                            </button>
 
-                                    {/* Main Razorpay CTA */}
-                                    <button
-                                        type="button"
-                                        className="btn-primary"
-                                        onClick={handlePayNow}
-                                        disabled={processingPayment}
-                                        style={styles.payBtn}
-                                    >
-                                        {processingPayment ? (
-                                            <>
-                                                <Loader2 size={18} className="spin" />
-                                                <span>Connecting to Razorpay...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <ShieldCheck size={20} />
-                                                <span>Pay ₹{booking.fare} with Razorpay</span>
-                                            </>
-                                        )}
-                                    </button>
+                                            {/* Test Mode Simulation */}
+                                            <button
+                                                type="button"
+                                                className="btn-secondary"
+                                                onClick={handleSimulatePayment}
+                                                disabled={processingPayment}
+                                                style={styles.simulateBtn}
+                                            >
+                                                <Sparkles size={16} color="#F59E0B" />
+                                                <span>Instant Test Settlement (Mock Webhook)</span>
+                                            </button>
 
-                                    {/* Test Mode Simulation */}
-                                    <button
-                                        type="button"
-                                        className="btn-secondary"
-                                        onClick={handleSimulatePayment}
-                                        disabled={processingPayment}
-                                        style={styles.simulateBtn}
-                                    >
-                                        <Sparkles size={16} color="#F59E0B" />
-                                        <span>Instant Test Checkout (Mock Settlement)</span>
-                                    </button>
-
-                                    <div style={styles.securityNote}>
-                                        🔒 Payments are secured with 256-bit encryption & HMAC-SHA256 signature verification.
-                                    </div>
+                                            <div style={styles.securityBadgesRow}>
+                                                <div style={styles.securityPill}>
+                                                    <Lock size={12} color="#10B981" />
+                                                    <span>256-Bit SSL</span>
+                                                </div>
+                                                <div style={styles.securityPill}>
+                                                    <ShieldCheck size={12} color="#38BDF8" />
+                                                    <span>Bank Grade</span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
                                 </>
                             )}
                         </motion.div>
@@ -420,7 +498,7 @@ const styles = {
         paddingBottom: '5rem',
     },
     main: {
-        maxWidth: '900px',
+        maxWidth: '920px',
         margin: '0 auto',
         padding: '2rem 1.5rem',
     },
@@ -430,30 +508,31 @@ const styles = {
     backBtn: {
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        padding: '0.6rem 1rem',
-        background: 'rgba(255, 255, 255, 0.04)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '10px',
-        color: '#CBD5E1',
-        fontWeight: 600,
+        gap: '0.55rem',
+        padding: '0.65rem 1.15rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '12px',
+        color: 'var(--text-secondary)',
+        fontWeight: 700,
         fontSize: '0.88rem',
         cursor: 'pointer',
+        transition: 'all 0.2s ease'
     },
     wrapper: {
         display: 'flex',
         justifyContent: 'center',
     },
     paymentCard: {
-        background: 'rgba(17, 27, 49, 0.8)',
-        backdropFilter: 'blur(25px)',
-        WebkitBackdropFilter: 'blur(25px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '24px',
+        background: 'var(--bg-card)',
+        backdropFilter: 'blur(28px)',
+        WebkitBackdropFilter: 'blur(28px)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '26px',
         padding: '3rem 2.5rem',
         width: '100%',
         maxWidth: '560px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.1)',
+        boxShadow: 'var(--shadow-xl), var(--glass-glow)',
     },
     cardHeader: {
         display: 'flex',
@@ -463,25 +542,26 @@ const styles = {
         marginBottom: '2rem',
     },
     iconCircle: {
-        width: '60px',
-        height: '60px',
-        borderRadius: '16px',
+        width: '64px',
+        height: '64px',
+        borderRadius: '18px',
         background: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 0 25px rgba(56, 189, 248, 0.4)',
-        marginBottom: '1rem',
+        boxShadow: '0 0 25px rgba(56, 189, 248, 0.45)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        marginBottom: '1.25rem',
     },
     cardTitle: {
         margin: 0,
-        fontSize: '1.75rem',
+        fontSize: '1.85rem',
         fontWeight: 800,
-        color: '#F8FAFC',
+        color: 'var(--text-main)',
     },
     cardSubtitle: {
         margin: '0.35rem 0 0 0',
-        color: '#94A3B8',
+        color: 'var(--text-muted)',
         fontSize: '0.9rem',
     },
     errorBanner: {
@@ -491,16 +571,16 @@ const styles = {
         background: 'rgba(244, 63, 94, 0.12)',
         border: '1px solid rgba(244, 63, 94, 0.3)',
         color: '#FDA4AF',
-        padding: '0.85rem 1rem',
-        borderRadius: '12px',
+        padding: '0.9rem 1.1rem',
+        borderRadius: '14px',
         marginBottom: '1.5rem',
         fontSize: '0.88rem',
     },
     summaryBox: {
-        background: 'rgba(0, 0, 0, 0.3)',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-        borderRadius: '16px',
-        padding: '1.25rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: '18px',
+        padding: '1.35rem',
         marginBottom: '1.5rem',
     },
     summaryRow: {
@@ -509,26 +589,25 @@ const styles = {
         alignItems: 'center',
     },
     summaryLabel: {
-        color: '#94A3B8',
+        color: 'var(--text-muted)',
         fontSize: '0.85rem',
-        fontWeight: 500,
-    },
-    summaryValue: {
-        color: '#F8FAFC',
-        fontSize: '0.92rem',
         fontWeight: 600,
     },
+    summaryValue: {
+        color: 'var(--text-main)',
+        fontSize: '0.92rem',
+        fontWeight: 700,
+    },
     summaryValuePnr: {
-        color: '#38BDF8',
-        fontSize: '0.95rem',
-        fontWeight: 800,
+        color: 'var(--accent-primary)',
+        fontSize: '1rem',
+        fontWeight: 900,
         letterSpacing: '0.05em',
-        fontFamily: 'monospace',
     },
     summaryDivider: {
         height: '1px',
-        background: 'rgba(255, 255, 255, 0.04)',
-        margin: '0.75rem 0',
+        background: 'var(--glass-border)',
+        margin: '0.8rem 0',
     },
     totalBox: {
         display: 'flex',
@@ -536,85 +615,100 @@ const styles = {
         alignItems: 'center',
         background: 'rgba(56, 189, 248, 0.08)',
         border: '1px solid rgba(56, 189, 248, 0.25)',
-        borderRadius: '16px',
-        padding: '1.25rem 1.5rem',
+        borderRadius: '18px',
+        padding: '1.35rem 1.5rem',
         marginBottom: '1.75rem',
     },
     totalLabel: {
-        color: '#CBD5E1',
+        color: 'var(--text-secondary)',
         fontSize: '0.9rem',
         fontWeight: 700,
     },
     totalDesc: {
-        color: '#64748B',
+        color: 'var(--text-dim)',
         fontSize: '0.75rem',
+        marginTop: '0.2rem'
     },
     totalValue: {
-        fontSize: '1.85rem',
-        fontWeight: 800,
-        color: '#38BDF8',
+        fontSize: '1.9rem',
+        fontWeight: 900,
+        color: 'var(--accent-primary)',
     },
     payBtn: {
         width: '100%',
         padding: '1rem',
         borderRadius: '14px',
         fontSize: '1rem',
-        marginBottom: '0.75rem',
+        marginBottom: '0.85rem',
     },
     simulateBtn: {
         width: '100%',
-        padding: '0.85rem',
+        padding: '0.9rem',
         borderRadius: '14px',
         fontSize: '0.9rem',
     },
-    securityNote: {
-        textAlign: 'center',
-        color: '#64748B',
-        fontSize: '0.75rem',
+    securityBadgesRow: {
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '0.75rem',
         marginTop: '1.5rem',
     },
+    securityPill: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.35rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
+        padding: '0.3rem 0.65rem',
+        borderRadius: '8px',
+        fontSize: '0.72rem',
+        color: 'var(--text-muted)',
+        fontWeight: 600,
+    },
     successCard: {
-        background: 'rgba(17, 27, 49, 0.85)',
-        backdropFilter: 'blur(25px)',
+        background: 'var(--bg-card)',
+        backdropFilter: 'blur(28px)',
         border: '1px solid rgba(16, 185, 129, 0.3)',
-        borderRadius: '24px',
+        borderRadius: '26px',
         padding: '3rem 2.5rem',
         width: '100%',
-        maxWidth: '600px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 40px rgba(16, 185, 129, 0.15)',
+        maxWidth: '620px',
+        boxShadow: 'var(--shadow-xl), 0 0 45px rgba(16, 185, 129, 0.2)',
     },
     successHeader: {
         textAlign: 'center',
         marginBottom: '2rem',
     },
     successBadge: {
-        width: '72px',
-        height: '72px',
+        width: '76px',
+        height: '76px',
         borderRadius: '50%',
         background: 'rgba(16, 185, 129, 0.15)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         margin: '0 auto 1.25rem auto',
+        boxShadow: '0 0 25px rgba(16, 185, 129, 0.3)'
     },
     successTitle: {
         margin: 0,
-        fontSize: '2rem',
+        fontSize: '2.1rem',
         fontWeight: 800,
-        color: '#F8FAFC',
+        color: 'var(--text-main)',
     },
     successSubtitle: {
         margin: '0.5rem 0 0 0',
-        color: '#94A3B8',
+        color: 'var(--text-muted)',
         fontSize: '0.92rem',
         lineHeight: 1.5,
     },
     ticketBox: {
-        background: 'rgba(0, 0, 0, 0.35)',
-        border: '1px dashed rgba(255, 255, 255, 0.15)',
-        borderRadius: '18px',
-        padding: '1.5rem',
+        background: 'var(--glass-bg-subtle)',
+        border: '1px dashed var(--glass-border)',
+        borderRadius: '20px',
+        padding: '1.75rem',
         marginBottom: '2rem',
+        position: 'relative'
     },
     ticketHeader: {
         display: 'flex',
@@ -624,44 +718,71 @@ const styles = {
     ticketLabel: {
         fontSize: '0.75rem',
         fontWeight: 700,
-        color: '#64748B',
+        color: 'var(--text-dim)',
         textTransform: 'uppercase',
         letterSpacing: '0.04em',
     },
+    pnrCopyRow: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        marginTop: '0.2rem'
+    },
     ticketPnr: {
-        fontSize: '1.25rem',
-        fontWeight: 800,
-        color: '#38BDF8',
-        fontFamily: 'monospace',
+        fontSize: '1.35rem',
+        fontWeight: 900,
+        color: 'var(--accent-primary)',
+        letterSpacing: '0.04em',
+    },
+    copyBtn: {
+        background: 'transparent',
+        border: 'none',
+        color: 'var(--text-muted)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0.2rem',
+        borderRadius: '6px',
+        transition: 'color 0.2s ease'
     },
     ticketDivider: {
         height: '1px',
-        background: 'rgba(255, 255, 255, 0.08)',
-        margin: '1rem 0',
+        background: 'var(--glass-border)',
+        margin: '1.15rem 0',
     },
     ticketGrid: {
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
-        gap: '1rem',
+        gap: '1.25rem',
     },
     ticketItem: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.2rem',
+        gap: '0.25rem',
     },
     ticketValue: {
         fontSize: '0.95rem',
-        fontWeight: 600,
-        color: '#F8FAFC',
+        fontWeight: 700,
+        color: 'var(--text-main)',
     },
-    ticketFooter: {
+    barcodeSection: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+    barcodeLines: {
+        display: 'flex',
+        gap: '3px',
+        alignItems: 'center'
+    },
+    ticketAmountWrap: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end'
+    },
     ticketAmount: {
-        fontSize: '1.4rem',
-        fontWeight: 800,
+        fontSize: '1.5rem',
+        fontWeight: 900,
         color: '#10B981',
     },
     successActions: {
@@ -678,3 +799,4 @@ const styles = {
 };
 
 export default Payment;
+
