@@ -22,7 +22,7 @@ const ProtectedRoute = ({ children }) => {
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#38BDF8', fontSize: '1.2rem', gap: '0.75rem' }}>
-                <span className="spin">⚡</span> Loading TBS Portal...
+                <span className="spin">⚡</span> Loading ChooChoo...
             </div>
         );
     }

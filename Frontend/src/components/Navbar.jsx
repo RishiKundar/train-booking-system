@@ -42,10 +42,10 @@ export const Navbar = () => {
                     </motion.div>
                     <div>
                         <div style={styles.brandTitleWrap}>
-                            <span className="font-display" style={styles.brandTitle}>TBS Rail</span>
+                            <span className="font-display" style={styles.brandTitle}>ChooChoo</span>
                             <span style={styles.liveDot} className="live-pulse" title="System Online" />
                         </div>
-                        <div style={styles.brandSubtitle}>Express Reservation Engine</div>
+                        <div style={styles.brandSubtitle}>Train travel, made easy</div>
                     </div>
                 </Link>
 
@@ -113,10 +113,10 @@ export const Navbar = () => {
                             style={{
                                 ...styles.navLink,
                                 ...(isActive('/admin') ? styles.adminLinkActive : {}),
-                                color: isActive('/admin') ? '#F59E0B' : 'var(--text-muted)'
+                                color: isActive('/admin') ? '#D6A847' : 'var(--text-muted)'
                             }}
                         >
-                            <ShieldCheck size={17} color={isActive('/admin') ? '#F59E0B' : 'var(--text-muted)'} />
+                            <ShieldCheck size={17} color={isActive('/admin') ? '#D6A847' : 'var(--text-muted)'} />
                             <span>Command Hub</span>
                             {isActive('/admin') && (
                                 <motion.div 
@@ -141,9 +141,9 @@ export const Navbar = () => {
                         aria-label="Toggle theme"
                     >
                         {isDark ? (
-                            <Sun size={18} color="#F59E0B" />
+                            <Sun size={18} color="#D6A847" />
                         ) : (
-                            <Moon size={18} color="#0284C7" />
+                            <Moon size={18} color="#B95845" />
                         )}
                     </motion.button>
 
@@ -225,11 +225,11 @@ const styles = {
         width: '42px',
         height: '42px',
         borderRadius: '12px',
-        background: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)',
+        background: 'linear-gradient(135deg, #E88370 0%, #B95845 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 0 20px rgba(56, 189, 248, 0.4)',
+        boxShadow: '0 0 20px rgba(232, 131, 112, 0.35)',
         border: '1px solid rgba(255, 255, 255, 0.2)'
     },
     brandTitleWrap: {
@@ -248,7 +248,7 @@ const styles = {
         width: '7px',
         height: '7px',
         borderRadius: '50%',
-        backgroundColor: '#10B981',
+        backgroundColor: '#82B69A',
         display: 'inline-block'
     },
     brandSubtitle: {
@@ -285,7 +285,7 @@ const styles = {
         color: 'var(--accent-primary)'
     },
     adminLinkActive: {
-        color: '#F59E0B'
+        color: '#D6A847'
     },
     activeIndicator: {
         position: 'absolute',
@@ -366,7 +366,7 @@ const styles = {
     roleTagAdmin: {
         fontSize: '0.62rem',
         fontWeight: 800,
-        color: '#F59E0B',
+        color: '#D6A847',
         letterSpacing: '0.06em'
     },
     roleTagPassenger: {

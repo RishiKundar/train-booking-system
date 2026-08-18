@@ -91,41 +91,13 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       BOOKING_DB_URL: ${BOOKING_DB_URL}
       SERVICES_TRAIN_URL: http://train-service:8082
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_BOOTSTRAP_SERVERS: ${UPSTASH_KAFKA_BROKER}
+      SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL: SASL_SSL
+      SPRING_KAFKA_PROPERTIES_SASL_MECHANISM: SCRAM-SHA-256
+      SPRING_KAFKA_PROPERTIES_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="${UPSTASH_KAFKA_USERNAME}" password="${UPSTASH_KAFKA_PASSWORD}";
     networks:
       - train-booking-network
-    depends_on:
-      - kafka
     restart: unless-stopped
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Kafka : Zookeeper
-  # ─────────────────────────────────────────────────────────────────────────
-
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.6.0
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-    networks:
-      - train-booking-network
-
-  kafka:
-    image: confluentinc/cp-kafka:7.6.0
-    container_name: kafka
-    depends_on:
-      - zookeeper
-    ports:
-      - "29092:29092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-    networks:
-      - train-booking-network
 
   # ─────────────────────────────────────────────────────────────────────────
   # Payment Service
@@ -146,11 +118,12 @@ services:
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_BOOTSTRAP_SERVERS: ${UPSTASH_KAFKA_BROKER}
+      SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL: SASL_SSL
+      SPRING_KAFKA_PROPERTIES_SASL_MECHANISM: SCRAM-SHA-256
+      SPRING_KAFKA_PROPERTIES_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="${UPSTASH_KAFKA_USERNAME}" password="${UPSTASH_KAFKA_PASSWORD}";
     networks:
       - train-booking-network
-    depends_on:
-      - kafka
     restart: unless-stopped
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -166,30 +139,16 @@ services:
       - "8085:8085"
     environment:
       SPRING_PROFILES_ACTIVE: neon
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_BOOTSTRAP_SERVERS: ${UPSTASH_KAFKA_BROKER}
+      SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL: SASL_SSL
+      SPRING_KAFKA_PROPERTIES_SASL_MECHANISM: SCRAM-SHA-256
+      SPRING_KAFKA_PROPERTIES_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="${UPSTASH_KAFKA_USERNAME}" password="${UPSTASH_KAFKA_PASSWORD}";
       USER_SERVICE_URL: http://user-service:8081
       SMTP_HOST: sandbox.smtp.mailtrap.io
       SMTP_PORT: 2525
       SMTP_USERNAME: 2369955d93f9cc
       SMTP_PASSWORD: 703ef2135426d3
       DEFAULT_FROM: trainbooking@test.com
-    networks:
-      - train-booking-network
-    restart: unless-stopped
-
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Front End
-  # ─────────────────────────────────────────────────────────────────────────
-
-  frontend:
-    build:
-      context: ../Frontend
-      dockerfile: Dockerfile
-    image: train-booking/frontend:latest
-    container_name: train-frontend
-    ports:
-      - "3000:80"
     networks:
       - train-booking-network
     restart: unless-stopped
