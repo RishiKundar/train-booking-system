@@ -193,22 +193,3 @@ services:
     networks:
       - train-booking-network
     restart: unless-stopped
-
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Front End
-  # ─────────────────────────────────────────────────────────────────────────
-
-  frontend:
-    build:
-      context: ../Frontend
-      dockerfile: Dockerfile
-    image: train-booking/frontend:latest
-    container_name: train-frontend
-    ports:
-      - "3000:80"
-    networks:
-      - train-booking-network
-    restart: unless-stopped
-
-
